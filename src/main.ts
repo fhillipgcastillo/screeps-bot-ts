@@ -45,8 +45,9 @@ import roleBuilder from "./role.builder";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
+// every 20 ticks, reset creeps action memory
 export const loop = ErrorMapper.wrapLoop(() => {
-  console.log(`Current game tick is ${Game.time}`);
+  // console.log(`Current game tick is ${Game.time}`);
 
   const activeCreeps = _.filter(Game.creeps, ((creep: Creep) => !creep.spawning));
 
@@ -56,6 +57,7 @@ export const loop = ErrorMapper.wrapLoop(() => {
       console.log('Clearing non-existing creep memory:', creepName);
     }
   }
+  // Game.map.visual.text("Target💥", new RoomPosition(10,16,Object.keys(Game.rooms)[0]), {color: '#FF0000', fontSize: 19});
 
   // auto spawn harvesters
   spawnManager.run();

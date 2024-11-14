@@ -83,7 +83,7 @@ const spawnManager = {
                         } else if (haulers.length < levelHandler.haulers.min) {
                             spawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
                         } else if (builders.length < levelHandler.builders.min) {
-                            spawn.spawnCreep([WORK, CARRY, WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
+                            spawn.spawnCreep([WORK, CARRY, WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
                         } else if (upgraders.length < levelHandler.upgraders.min) {
                             spawn.spawnCreep([WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
                         }
@@ -93,7 +93,7 @@ const spawnManager = {
                                 spawn.spawnCreep([WORK, WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
                             }
                             else if (haulers.length < levelHandler.haulers.max) {
-                                spawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
+                                spawn.spawnCreep([CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
                             } else if (builders.length < levelHandler.builders.max) {
                                 spawn.spawnCreep([WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
                             } else if (upgraders.length < levelHandler.upgraders.max) {

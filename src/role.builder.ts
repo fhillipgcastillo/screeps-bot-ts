@@ -132,9 +132,9 @@ const roleBuilder: RoleBuilder = {
             const buildActionError = creep.build(target);
             if (buildActionError == ERR_NOT_IN_RANGE) {
                 creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
-            } else if(buildActionError === ERR_INVALID_TARGET){
+            } else if (buildActionError === ERR_INVALID_TARGET) {
                 creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
-            creep.memory.buildTarget = undefined;
+                creep.memory.buildTarget = undefined;
             } else if (buildActionError !== OK) {
                 console.log(creep.name + " Bld Error ", buildActionError);
             }

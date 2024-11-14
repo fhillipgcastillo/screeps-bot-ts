@@ -55,7 +55,7 @@ const haulerHandler: RoleHauler = {
         // creep.say("Moving...");
         let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
         if (movingError != OK) {
-          console.log(creep.name, "issue moving");
+          // console.log(creep.name, "issue moving");
           this.cleanUpTargetsState(creep);
         }
       // } else if (harvestAction === ERR_INVALID_TARGET) {
@@ -67,7 +67,7 @@ const haulerHandler: RoleHauler = {
         console.log(creep.name + "  Rsc Another error", harvestAction);
         this.cleanUpTargetsState(creep);
       } else {
-        console.log(creep.name, harvestAction);
+        // console.log(creep.name, harvestAction);
       }
     }
   },
@@ -135,7 +135,6 @@ const haulerHandler: RoleHauler = {
       });
 
     if(emptyExtensions.length > 0) {
-      console.log("emptyExtensions", emptyExtensions);
       targets = emptyExtensions;
     } else if (storageAreFull >= 0.9 && containers.length > 0) {
       targets = containers;

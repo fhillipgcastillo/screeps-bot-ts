@@ -26,17 +26,15 @@ const roleUpgrader:RoleHauler = {
         const controller = creep.room.controller;
 
 	    if(creep.memory.upgrading && controller) {
-            console.log(creep.name, "upgrading controller", creep.room.controller)
             const upgradeAction = creep.upgradeController(controller);
             if( upgradeAction== ERR_NOT_IN_RANGE) {
                 creep.moveTo(controller, {visualizePathStyle: {stroke: '#ffffff'}});
             } else if(upgradeAction === ERR_NO_BODYPART){
-                console.log(creep.name, "No BOdy part")
-            } else {
-                console.log("didn't upgrade", upgradeAction)
+                creep.say("No Body part")
+            // } else {
+            //     console.log("didn't upgrade", upgradeAction)
             }
         } else if(containers.length > 0) {
-            console.log(creep.name, "picking up energy "+containers.length)
             let container = findClosestContainer(creep, containers);
 
             if(container && creep.withdraw(container, RESOURCE_ENERGY ) == ERR_NOT_IN_RANGE) {

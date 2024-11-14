@@ -54,8 +54,8 @@ const roleHarvester: RoleHarvester = {
                         }
                     } else if (harvestAction === ERR_INVALID_TARGET) {
                         console.log("Hvst ERR_INVALID_TARGET");
-                            creep.say("INV Tgt")
-                            this.cleanUpTargetsState(creep);
+                        creep.say("INV Tgt")
+                        this.cleanUpTargetsState(creep);
                     } else if (harvestAction !== OK) {
                         console.log(`${creep.name} Hvst Another error`, harvestAction);
                         this.cleanUpTargetsState(creep);
@@ -67,7 +67,7 @@ const roleHarvester: RoleHarvester = {
                 this.storeNewHarvestTarget(creep)
             }
         } catch (error) {
-            console.log(error)
+            console.log("harvest error", error)
         }
     },
     storeNewHarvestTarget(creep) {
