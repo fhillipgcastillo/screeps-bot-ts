@@ -34,9 +34,11 @@ const haulerHandler: RoleHauler = {
     }
   },
   hauler: function (creep) {
-    let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS, {
-      filter: resource => resource.resourceType === RESOURCE_ENERGY
-    });
+    let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
+    //   {
+    //   filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
+    // }
+  );
     // if (!creep.memory.sourceTarget) {
 
     // }
@@ -56,9 +58,12 @@ const haulerHandler: RoleHauler = {
       if (harvestAction == ERR_NOT_IN_RANGE) {
         // creep.say("Moving...");
         let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
-        if (movingError != OK) {
+        if (movingError !== OK) {
           // console.log(creep.name, "issue moving");
+          console.log("move action", movingError)
           this.cleanUpTargetsState(creep);
+        } else {
+          creep.say("hl mvd")
         }
       // } else if (harvestAction === ERR_INVALID_TARGET) {
       //   console.log(creep.name + "  Rsc ERR_INVALID_TARGET");
@@ -68,9 +73,10 @@ const haulerHandler: RoleHauler = {
       } else if (harvestAction !== OK) {
         console.log(creep.name + "  Rsc Another error", harvestAction);
         this.cleanUpTargetsState(creep);
-      } else {
-        // console.log(creep.name, harvestAction);
       }
+    } else {
+      this.cleanUpTargetsState(creep);
+
     }
   },
   memorizedPrevTargets(creep) {
@@ -159,9 +165,8 @@ const haulerHandler: RoleHauler = {
         }
       }
     } else {
-      // let target = creep.pos.findClosestByRange(targets);
-
-      console.log(`${creep.name} no targets`)
+      this.cleanUpTargetsState(creep);
+      creep.say(`Can't transfer`)
     }
   },
   stateSetter: function (creep) {
@@ -171,6 +176,7 @@ const haulerHandler: RoleHauler = {
       creep.memory.transfering = false;
       // creep.memory.idle = false;
     } else if (creep.store.getFreeCapacity() === 0 && !creep.memory.transfering) {
+      this.cleanUpTargetsState(creep);
       creep.memory.transfering = true;
       creep.memory.haulering = false;
       // creep.memory.idle = false;

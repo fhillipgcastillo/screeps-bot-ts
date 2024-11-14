@@ -48,7 +48,7 @@ const spawnManager = {
                 // Level 1 controller
                 if (currentLevel < 2 || harvesters.length < 2 || haulers.length <= 2 || haulers.length <= 2) {
                     this.handleInitialRC(spawn)
-                    console.log("first spawn")
+                    // console.log("first spawn")
                 } else if (currentLevel >= 2) {
                     var enemiesInRoom = spawn.room.find(FIND_HOSTILE_CREEPS);
                     if(!enemiesInRoom)
@@ -117,7 +117,7 @@ const spawnManager = {
         // after container is built, spawn the upgraders or jsut change the role of builders to upgraders or waint until certain point and start building Roads
 
         if ((harvesters.length < 2
-            || haulers.length < levelHandler.haulers.min) || avilableEnergy <= 300) {
+            || haulers.length < levelHandler.haulers.min)) {
             if (harvesters.length === 0) {
                 spawn.spawnCreep([WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else if (harvesters.length < levelHandler.harvesters.min && haulers.length !== 0 && harvesters.length % 2 !== 0) {
@@ -135,7 +135,7 @@ const spawnManager = {
                     || upgraders.length <= levelHandler.upgraders.min
                 )
             )) {
-                console.log("second spawn condition")
+                // console.log("second spawn condition")
                 if (harvesters.length <= levelHandler.harvesters.min) {
                     spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
                 } else if (haulers.length < levelHandler.haulers.min) {
