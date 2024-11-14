@@ -35,9 +35,10 @@ const haulerHandler: RoleHauler = {
   },
   hauler: function (creep) {
     let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
-    //   {
-    //   filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
-    // }
+      {
+      filter: resource => resource.amount > 50
+      // filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
+    }
   );
     // if (!creep.memory.sourceTarget) {
 
