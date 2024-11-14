@@ -37,9 +37,9 @@ const haulerHandler: RoleHauler = {
     var droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS, {
       filter: resource => resource.resourceType === RESOURCE_ENERGY
     });
-    if (!creep.memory.sourceTarget) {
+    // if (!creep.memory.sourceTarget) {
 
-    }
+    // }
     let resourceTarget;
     if (droppedResources.length > 0 && creep.memory.sourceTarget) {
       resourceTarget = _.find(droppedResources, r => r.id === creep.memory.sourceTarget)
@@ -54,15 +54,20 @@ const haulerHandler: RoleHauler = {
       if (harvestAction == ERR_NOT_IN_RANGE) {
         // creep.say("Moving...");
         let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
-        if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
-          console.log(creep.name + " mv2 Rsc ERR_NO_PATH", movingError);
-          creep.memory.transfering = false;
-          creep.memory.haulering = false;
+        if (movingError != OK) {
+          console.log(creep.name, "issue moving");
+          this.cleanUpTargetsState(creep);
         }
-      } else if (harvestAction === ERR_INVALID_TARGET) {
-        console.log(creep.name + "  Rsc ERR_INVALID_TARGET");
+      // } else if (harvestAction === ERR_INVALID_TARGET) {
+      //   console.log(creep.name + "  Rsc ERR_INVALID_TARGET");
+      // } else if(harvestAction === ERR_NOT_ENOUGH_RESOURCES){
+      //   console.log("not enought energy, change source");
+      //   this.cleanUpTargetsState(creep);
       } else if (harvestAction !== OK) {
         console.log(creep.name + "  Rsc Another error", harvestAction);
+        this.cleanUpTargetsState(creep);
+      } else {
+        console.log(creep.name, harvestAction);
       }
     }
   },

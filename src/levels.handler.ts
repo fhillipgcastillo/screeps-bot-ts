@@ -57,15 +57,15 @@ export const levelDefinitions:LevelDefinitions = {
     },
     "2": {
         harvesters: {
-            min: 4,
+            min: 2,
             max: 8
         },
         builders: {
-            min: 4,
+            min: 2,
             max: 8
         },
         upgraders: {
-            min: 3,
+            min: 2,
             max: 4
         },
         rangers: {
@@ -77,7 +77,7 @@ export const levelDefinitions:LevelDefinitions = {
             max: 5,
         },
         haulers: {
-            min: 6,
+            min: 3,
             max: 8,
         }
     },

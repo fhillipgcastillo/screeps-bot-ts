@@ -42,3 +42,7 @@ declare global {
     let makeAllHaulersTransfer: () => void;
     let makeAllHaulersChangeSource: () => void;
 }
+
+export const makeAllHarvesterChangeSource = () => {
+    _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester').forEach(h => {         h.memory.sourceTarget = undefined})
+}
