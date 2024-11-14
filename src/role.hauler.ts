@@ -1,6 +1,7 @@
 // import * as _ from "lodash";
 
 type RoleHauler = {
+  spawn?: StructureSpawn,
   run: (creep: Creep) => void,
   // getCreepTarget: (creep:Creep) => Source | undefined,
   hauler: (creep: Creep) => void,
@@ -19,9 +20,12 @@ type RoleHauler = {
 
 const haulerHandler: RoleHauler = {
   /** @param {Creep} creep **/
+  spawn: undefined,
   run: function (creep) {
     this.stateSetter(creep);
     // creep.say(creep.name);
+    let spawnName = Object.keys(Game.spawns)[0];
+    this.spawn = Game.spawns[spawnName];
 
     if (creep.memory.haulering) {
       this.hauler(creep);
@@ -101,7 +105,9 @@ const haulerHandler: RoleHauler = {
   },
   transfer(creep) {
     let targets = undefined;
-    const storageAreFull = Game.spawns.Spawn1.room.energyAvailable / Game.spawns.Spawn1.room.energyCapacityAvailable ;
+    if(!this.spawn) return;
+
+    const storageAreFull = this.spawn.store.getUsedCapacity(RESOURCE_ENERGY) / this.spawn.store.getCapacity(RESOURCE_ENERGY) ;
     const containers = creep.room.find(FIND_STRUCTURES, {
       filter: (s) =>
         s.structureType === STRUCTURE_CONTAINER
@@ -114,19 +120,19 @@ const haulerHandler: RoleHauler = {
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
       }
     });
-    const structures = creep.room.find(FIND_STRUCTURES, {
-      filter: (structure) => {
-        return (structure.structureType == STRUCTURE_EXTENSION ||
-          structure.structureType == STRUCTURE_SPAWN ||
-          structure.structureType == STRUCTURE_TOWER) &&
-          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-      }
-    });
+      const structures = creep.room.find(FIND_STRUCTURES, {
+        filter: (structure) => {
+          return (structure.structureType == STRUCTURE_EXTENSION ||
+            structure.structureType == STRUCTURE_SPAWN ||
+            structure.structureType == STRUCTURE_TOWER) &&
+            structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+        }
+      });
 
-    if(emptyExtensions) {
+    if(emptyExtensions.length > 0) {
       console.log("emptyExtensions", emptyExtensions);
       targets = emptyExtensions;
-    } else if (storageAreFull >= 0.7 && containers.length > 0) {
+    } else if (storageAreFull >= 0.9 && containers.length > 0) {
       targets = containers;
     } else {
       targets = structures;

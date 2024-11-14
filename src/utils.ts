@@ -1,5 +1,4 @@
 // import * as _ from "lodash";
-
 const bodyWeights = {
     MOVE: 50,
     WORK: 100,
@@ -37,4 +36,9 @@ export const makeAllHaulersTransfer = () => {
 }
 export const makeAllHaulersChangeSource = () => {
     _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler').forEach(h => { h.memory.sourceTarget = undefined; h.memory.transfering = false; })
+}
+
+declare global {
+    let makeAllHaulersTransfer: () => void;
+    let makeAllHaulersChangeSource: () => void;
 }

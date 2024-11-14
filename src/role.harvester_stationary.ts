@@ -46,7 +46,7 @@ const roleHarvester: RoleHarvester = {
                         if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
                             console.log("Hvst mv2 ERR_NO_PATH", movingError); //most commont error when there's a lot of creeps
                             creep.say("NO Pth")
-                            // this.cleanUpTargetsState(creep);
+                            this.cleanUpTargetsState(creep);
                             let targets = creep.room.find(FIND_SOURCES);
 
                             this.getNextClosestTarget(creep, targets)
