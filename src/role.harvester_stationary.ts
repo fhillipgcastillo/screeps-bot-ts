@@ -93,7 +93,7 @@ const roleHarvester: RoleHarvester = {
         }
     },
     cleanUpTargetsState(creep) {
-        this.memorizedPrevTargets(creep);
+        // this.memorizedPrevTargets(creep);
         creep.memory.prevSourceTarget = creep.memory.sourceTarget;
         creep.memory.sourceTarget = undefined;
     },
@@ -111,9 +111,8 @@ const roleHarvester: RoleHarvester = {
         }
     },
     getNextClosestTarget(creep, targets) {
-        this.shouldResetPrevTargets(creep, targets);
-        var availableTargets = _.filter(targets, (source) => !creep.memory.prevTargets.includes(source.id));
-        var nextClosestTaret = this.getClosestTarget(creep, availableTargets)
+        let availableTargets = _.filter(targets, (source) => source.id !== creep.memory.sourceTarget);
+        let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
         return nextClosestTaret
     },
     stateSetter: function (creep) {

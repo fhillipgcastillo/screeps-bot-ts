@@ -34,7 +34,7 @@ const haulerHandler: RoleHauler = {
     }
   },
   hauler: function (creep) {
-    var droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS, {
+    let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS, {
       filter: resource => resource.resourceType === RESOURCE_ENERGY
     });
     // if (!creep.memory.sourceTarget) {
@@ -45,11 +45,13 @@ const haulerHandler: RoleHauler = {
       resourceTarget = _.find(droppedResources, r => r.id === creep.memory.sourceTarget)
     } else if (droppedResources.length > 0) {
       resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
+      // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
+      // resourceTarget = this.getClosestTarget(creep, availableTargets)
     }
 
     if (resourceTarget) {
       creep.memory.sourceTarget = resourceTarget.id;
-      var harvestAction = creep.pickup(resourceTarget);
+      let harvestAction = creep.pickup(resourceTarget);
 
       if (harvestAction == ERR_NOT_IN_RANGE) {
         // creep.say("Moving...");
@@ -78,12 +80,12 @@ const haulerHandler: RoleHauler = {
     creep.memory.prevTargets.push(creep.memory.sourceTarget);
   },
   cleanUpTargetsState(creep) {
-    this.memorizedPrevTargets(creep);
+    // this.memorizedPrevTargets(creep);
     creep.memory.prevSourceTarget = creep.memory.sourceTarget;
     creep.memory.sourceTarget = undefined;
   },
   getClosestTarget(creep, targets) {
-    var nextClosestTaret = creep.pos.findClosestByRange(targets)
+    let nextClosestTaret = creep.pos.findClosestByRange(targets)
     return nextClosestTaret
   },
   shouldResetPrevTargets(creep, targets) {
@@ -95,9 +97,11 @@ const haulerHandler: RoleHauler = {
     }
   },
   getNextClosestTarget(creep, targets) {
-    this.shouldResetPrevTargets(creep, targets);
-    var availableTargets = _.filter(targets, (source) => !creep.memory.prevTargets.includes(source.id));
-    var nextClosestTaret = this.getClosestTarget(creep, availableTargets)
+    // this.shouldResetPrevTargets(creep, targets);
+    let availableTargets = _.filter(targets, (source) => source.id !== creep.memory.sourceTarget);
+    let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
+    // let availableTargets = _.filter(targets, (source) => !creep.memory.prevTargets.includes(source.id));
+    // let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
     return nextClosestTaret;
   },
   getAppropiateResourceTarget(creep, sources) {
@@ -143,7 +147,7 @@ const haulerHandler: RoleHauler = {
     }
 
     if (targets.length > 0) {
-      var target = creep.pos.findClosestByRange(targets);
+      let target = creep.pos.findClosestByRange(targets);
       if (target) {
         let transferAction = target && creep.transfer(target, RESOURCE_ENERGY);
 
@@ -155,7 +159,7 @@ const haulerHandler: RoleHauler = {
         }
       }
     } else {
-      // var target = creep.pos.findClosestByRange(targets);
+      // let target = creep.pos.findClosestByRange(targets);
 
       console.log(`${creep.name} no targets`)
     }
