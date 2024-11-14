@@ -1,4 +1,11 @@
 import { ErrorMapper } from "utils/ErrorMapper";
+// import * as _ from "lodash";
+
+import spawnManager from "./spawn.manager";
+import roleHarvester from "./role.harvester_stationary";
+import roleHauler from "./role.hauler";
+import roleUpgrader from "./role.upgrader";
+import roleBuilder from "./role.builder";
 
 declare global {
   /*
@@ -19,6 +26,13 @@ declare global {
     role: string;
     room: string;
     working: boolean;
+
+    [name: string]: any;
+    building?: boolean;
+    upgrading?: boolean;
+    target?: Id<_HasId>;
+    harvesting?: boolean;
+    source?: Id<Source>;
   }
 
   // Syntax for adding proprties to `global` (ex "global.log")
@@ -34,10 +48,58 @@ declare global {
 export const loop = ErrorMapper.wrapLoop(() => {
   console.log(`Current game tick is ${Game.time}`);
 
-  // Automatically delete memory of missing creeps
-  for (const name in Memory.creeps) {
-    if (!(name in Game.creeps)) {
-      delete Memory.creeps[name];
+  const activeCreeps = _.filter(Game.creeps, ((creep: Creep) => !creep.spawning));
+
+  for (var creepName in Memory.creeps) {
+    if (!Game.creeps[creepName]) {
+      delete Memory.creeps[creepName];
+      console.log('Clearing non-existing creep memory:', creepName);
+    }
+  }
+
+  // auto spawn harvesters
+  spawnManager.run();
+  for (let name in Game.spawns) {
+    const spawn = Game.spawns[name];
+
+    if (spawn.room?.controller) {
+      //auto activate safe mode
+      if (spawn.room.controller.level >= 2 && spawn.room.controller.safeModeAvailable) {
+        spawn.room.controller.activateSafeMode();
+      }
+      // if (spawn.room.controller.level === 3) {
+      //     var tower = Game.getObjectById('2702f7754f7e3bbdd0f32215');
+      //     if (tower) {
+      //         // heal
+      //         var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, { filter: (structure) => structure.hits < structure.hitsMax })
+      //         if (closestDamagedStructure) {
+      //             tower.repair(closestDamagedStructure);
+      //         }
+
+      //         // attack
+      //         var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
+      //         if (closestHostile) {
+      //             tower.attack(closestHostile);
+      //         }
+
+      //     }
+      // }
+    }
+    for (var creepName in activeCreeps) {
+      var creep = activeCreeps[creepName];
+      if (creep.memory.role == 'harvester') {
+        roleHarvester.run(creep);
+      } else if (creep.memory.role == 'hauler') {
+        roleHauler.run(creep);
+      } else if (creep.memory.role == 'upgrader') {
+        roleUpgrader.run(creep);
+      } else if (creep.memory.role == 'builder') {
+        roleBuilder.run(creep);
+        // } else if (creep.memory.role == 'defender') {
+        //     roleDefender.run(creep);
+        // } else if ( creep.memory.role == 'ranger') {
+        //     roleRanger.run(creep);
+      }
     }
   }
 });
