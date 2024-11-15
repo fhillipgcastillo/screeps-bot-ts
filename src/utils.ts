@@ -50,18 +50,27 @@ export const makeAllHarvesterChangeSource = () => {
 function others() {
     _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler').forEach(h => {
         h.memory.prevTargets = undefined;
-        // h.memory.transfering = true;
     })
 
     _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester').forEach(h => {
         h.memory.prevTargets = undefined;
-        // h.memory.transfering = true;
     })
 
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler').forEach(h => {
+    _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader').forEach(h => {
         h.memory.upgrading = false;
     })
-
+    //  reset the builders
+    _.filter(Game.creeps, (creep) => creep.memory.role == 'builder').forEach(h => {
+        h.memory.harvesting = false;
+        h.memory.building = true;
+    })
     // find extensions structures
     Game.creeps["Harvester63959742"].room.find(FIND_MY_STRUCTURES, {filter: (s) => s.structureType === STRUCTURE_EXTENSION})
+
+    // small builder
+    // Game.spawns.Spawn1.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
+    // // better builder 500energy
+    // Game.spawns.Spawn1.spawnCreep([WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+
+    // Game.spawns.Spawn1.spawnCreep([CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } });
 }
