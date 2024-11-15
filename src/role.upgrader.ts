@@ -22,7 +22,7 @@ const roleUpgrader:RoleHauler = {
 	        creep.say('⚡ upgrade');
 	    }
         var containers = getContainers(creep, 50)
-
+        const extensions = creep.room.find(FIND_MY_STRUCTURES, {filter: (s) => s.structureType === STRUCTURE_EXTENSION})
         const controller = creep.room.controller;
 
 	    if(creep.memory.upgrading && controller) {
@@ -34,6 +34,12 @@ const roleUpgrader:RoleHauler = {
             // } else {
             //     console.log("didn't upgrade", upgradeAction)
             }
+        } else if(extensions.length > 0) {
+            let theextension =  creep.pos.findClosestByRange(extensions);
+
+            if(theextension && creep.withdraw(theextension, RESOURCE_ENERGY ) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(theextension, {visualizePathStyle: {stroke: '#ffaa00'}});
+            }
         } else if(containers.length > 0) {
             let container = findClosestContainer(creep, containers);
 
@@ -41,17 +47,17 @@ const roleUpgrader:RoleHauler = {
                 creep.moveTo(container, {visualizePathStyle: {stroke: '#ffaa00'}});
             }
         }
-        // else {
-        //     // roleHauler.hauler(creep);
-        //     let spawn = Game.spawns.Spawn1;
-        //     if(creep.withdraw(spawn, RESOURCE_ENERGY ) == ERR_NOT_IN_RANGE) {
-        //         creep.moveTo(spawn, {visualizePathStyle: {stroke: '#ffaa00'}});
-        //     }
-        //     // var sources = creep.room.find(FIND_SOURCES);
-        //     // if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
-        //     //     creep.moveTo(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
-        //     // }
-        // }
+        else {
+            // roleHauler.hauler(creep);
+            let spawn = Game.spawns.Spawn1;
+            if(creep.withdraw(spawn, RESOURCE_ENERGY ) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(spawn, {visualizePathStyle: {stroke: '#ffaa00'}});
+            }
+            // var sources = creep.room.find(FIND_SOURCES);
+            // if(creep.harvest(sources[0]) == ERR_NOT_IN_RANGE) {
+            //     creep.moveTo(sources[0], {visualizePathStyle: {stroke: '#ffaa00'}});
+            // }
+        }
 	}
 };
 

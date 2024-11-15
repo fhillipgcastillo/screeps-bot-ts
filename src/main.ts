@@ -66,9 +66,9 @@ export const loop = ErrorMapper.wrapLoop(() => {
 
     if (spawn.room?.controller) {
       //auto activate safe mode
-      if (spawn.room.controller.level >= 2 && spawn.room.controller.safeModeAvailable) {
-        spawn.room.controller.activateSafeMode();
-      }
+      // if (spawn.room.controller.level >= 2 && spawn.room.controller.safeModeAvailable) {
+      //   spawn.room.controller.activateSafeMode();
+      // }
       // if (spawn.room.controller.level === 3) {
       //     var tower = Game.getObjectById('2702f7754f7e3bbdd0f32215');
       //     if (tower) {

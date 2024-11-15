@@ -151,12 +151,19 @@ const roleBuilder: RoleBuilder = {
             // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
         });
 
+        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION })
         let container = creep.pos.findClosestByRange(containers);
-        let spawn = Game.spawns.Spawn1;
+        if (extensions.length > 0) {
+            let theextension = creep.pos.findClosestByRange(extensions);
 
-        if (container && creep.withdraw(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            if (theextension && creep.withdraw(theextension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(theextension, { visualizePathStyle: { stroke: '#ffaa00' } });
+            }
+        }
+        else if (container && creep.withdraw(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
             creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
         } else {
+            let spawn = Game.spawns.Spawn1;
             if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
