@@ -46,3 +46,14 @@ declare global {
 export const makeAllHarvesterChangeSource = () => {
     _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester').forEach(h => {         h.memory.sourceTarget = undefined})
 }
+
+
+_.filter(Game.creeps, (creep) => creep.memory.role == 'hauler').forEach(h => {
+    h.memory.prevTargets = undefined;
+    // h.memory.transfering = true;
+})
+
+_.filter(Game.creeps, (creep) => creep.memory.role == 'harvester').forEach(h => {
+    h.memory.prevTargets = undefined;
+    // h.memory.transfering = true;
+})
