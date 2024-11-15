@@ -25,26 +25,23 @@ function cleanUpTargetsState(creep:Creep) {
 function withdrowRemains(creep: Creep, target: any) {
   creep.memory.sourceTarget = undefined;
   let withdrowAction = creep.withdraw(target, RESOURCE_ENERGY);
-  console.log("withdraw remains")
+
   if (withdrowAction == ERR_NOT_IN_RANGE) {
     // creep.say("Moving...");
     let movingError = creep.moveTo(target, { visualizePathStyle: { stroke: '#ff6600' } });
     if (movingError !== OK) {
-      // console.log(creep.name, "issue moving");
-      console.log("move action", movingError)
+      console.log("mv act err", movingError)
       cleanUpTargetsState(creep);
     } else {
       creep.say("moving...")
     }
-    // } else if (withdrowAction === ERR_INVALID_TARGET) {
-    //   console.log(creep.name + "  Rsc ERR_INVALID_TARGET");
-    // } else if(withdrowAction === ERR_NOT_ENOUGH_RESOURCES){
-    //   console.log("not enought energy, change source");
-    //   this.cleanUpTargetsState(creep);
+  } else if(withdrowAction === ERR_INVALID_TARGET){
+    console.log(creep.name + " Inv tgt", target);
+    withdrowAction = creep.pickup(target);
   } else if (withdrowAction !== OK) {
     console.log(creep.name + "  Rsc Another error", withdrowAction);
-    console.log("target", creep.memory.sourceTarget);
-    cleanUpTargetsState(creep);
+    console.log("Wdr target", target);
+    // cleanUpTargetsState(creep);
   }
 };
 const haulerHandler: RoleHauler = {
@@ -70,7 +67,9 @@ const haulerHandler: RoleHauler = {
       }
     );
     const tombStones = creep.room.find(FIND_TOMBSTONES);
-    const ruins = creep.room.find(FIND_RUINS);
+    const ruins = creep.room.find(FIND_RUINS, {
+      filter: r => r.store.energy > 0
+    });
 
     let resourceTarget;
     let target: Tombstone | Ruin | null = null;
@@ -86,7 +85,7 @@ const haulerHandler: RoleHauler = {
       // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
       // resourceTarget = this.getClosestTarget(creep, availableTargets)
     }
-    console.log("hauler", target)
+
     if (target !== null) {
       withdrowRemains(creep, target);
     }
