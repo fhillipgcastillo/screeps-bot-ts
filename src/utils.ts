@@ -65,11 +65,14 @@ function others() {
         h.memory.building = true;
     })
     // find extensions structures
-    // Game.creeps["Harvester63959742"].room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION })
-
+    Game.creeps["Harvester63959742"].room.find(FIND_MY_STRUCTURES, {filter: (s) => s.structureType === STRUCTURE_EXTENSION})
+    // harvester
+    // Game.spawns.Spawn1.spawnCreep([WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
     // small builder
-    // Game.spawns.Spawn1.spawnCreep([WORK, WORK, WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
-    // // better builder 500energy
+    // Game.spawns.Spawn1.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
+    // Game.spawns.Spawn1.spawnCreep([WORK, WORK,  CARRY, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+
+    // better builder 500energy
     // Game.spawns.Spawn1.spawnCreep([WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
 
     // Game.spawns.Spawn1.spawnCreep([CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } });

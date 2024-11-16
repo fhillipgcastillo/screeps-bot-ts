@@ -63,8 +63,8 @@ import roleExplorer from "role.explorer";
 
   // auto spawn harvesters
   spawnManager.run();
-  for (let name in Game.spawns) {
-    const spawn = Game.spawns[name];
+  for (let name in activeCreeps) {
+    const spawn = activeCreeps[name];
 
     if (spawn.room?.controller) {
       //auto activate safe mode
