@@ -6,6 +6,7 @@ import roleHarvester from "./role.harvester_stationary";
 import roleHauler from "./role.hauler";
 import roleUpgrader from "./role.upgrader";
 import roleBuilder from "./role.builder";
+import roleExplorer from "role.explorer";
 
 // declare global {
 //   /*
@@ -101,6 +102,8 @@ export const loop = ErrorMapper.wrapLoop(() => {
         //     roleDefender.run(creep);
         // } else if ( creep.memory.role == 'ranger') {
         //     roleRanger.run(creep);
+      } else if(creep.memory.role === "explorer"){
+        roleExplorer.run(creep) //spawn
       }
     }
   }

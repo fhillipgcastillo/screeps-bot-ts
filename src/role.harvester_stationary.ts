@@ -34,6 +34,7 @@ const roleHarvester: RoleHarvester = {
     harvest: function (creep) {
         try {
 
+            const mapExits = Game.map.describeExits("W52S5")
             if (creep.memory.sourceTarget) {
                 // debugger;
                 let sourceTarget = this.getCreepTarget(creep);
