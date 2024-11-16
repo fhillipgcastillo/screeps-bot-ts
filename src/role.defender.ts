@@ -19,7 +19,7 @@ function run(creep:Creep): void {
         }
     } else {
         // dispawn or moveback
-
+        console.log("defender nothing");
     }
 }
 function attackOrMove(creep:Creep, target: Creep | AnyStructure) {

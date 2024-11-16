@@ -42,8 +42,7 @@ function withdrowRemains(creep: Creep, target: any) {
     creep.say("Not enough energy");
     cleanUpTargetsState(creep);
   } else if (withdrowAction !== OK) {
-    console.log(creep.name + "  Rsc Another error", withdrowAction);
-    console.log("Wdr target", target);
+    console.log(creep.name + "  Rsc error", withdrowAction);
     cleanUpTargetsState(creep);
   }
 };
@@ -177,7 +176,7 @@ const haulerHandler: RoleHauler = {
     });
     const structures = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
-        return (structure.structureType == STRUCTURE_EXTENSION ||
+        return (
           structure.structureType == STRUCTURE_SPAWN ||
           structure.structureType == STRUCTURE_TOWER) &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;

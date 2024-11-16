@@ -7,6 +7,8 @@ import roleHauler from "./role.hauler";
 import roleUpgrader from "./role.upgrader";
 import roleBuilder from "./role.builder";
 import roleExplorer from "role.explorer";
+import roleDefender from "role.defender";
+import roleRanger from "role.ranger";
 
 // declare global {
 //   /*
@@ -99,10 +101,10 @@ import roleExplorer from "role.explorer";
         roleUpgrader.run(creep);
       } else if (creep.memory.role == 'builder') {
         roleBuilder.run(creep);
-        // } else if (creep.memory.role == 'defender') {
-        //     roleDefender.run(creep);
-        // } else if ( creep.memory.role == 'ranger') {
-        //     roleRanger.run(creep);
+        } else if (creep.memory.role == 'defender') {
+            roleDefender.run(creep);
+        } else if ( creep.memory.role == 'ranger') {
+            roleRanger.run(creep);
       } else if(creep.memory.role === "explorer"){
         roleExplorer.run(creep) //spawn
       }
