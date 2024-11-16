@@ -13,11 +13,11 @@ type RoleHauler = {
   // getARandomTarget: (sources: Source[]) => Resource | undefined,
   getClosestTarget: (creep: Creep, targets: any[]) => Resource | undefined,
   shouldResetPrevTargets: (creep: Creep, targets: any[]) => void,
-  getNextClosestTarget: (creep: Creep, targets: any[]) => Resource  | Structure<StructureConstant> | Tombstone | Ruin | undefined,
-  getAppropiateResourceTarget: (creep: Creep, targets: any[]) => Resource  | Structure<StructureConstant> | Tombstone | Ruin | undefined,
+  getNextClosestTarget: (creep: Creep, targets: any[]) => Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined,
+  getAppropiateResourceTarget: (creep: Creep, targets: any[]) => Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined,
   stateSetter: (creep: Creep) => void,
 };
-function cleanUpTargetsState(creep:Creep) {
+function cleanUpTargetsState(creep: Creep) {
   // this.memorizedPrevTargets(creep);
   creep.memory.prevSourceTarget = creep.memory.sourceTarget;
   creep.memory.sourceTarget = undefined;
@@ -35,13 +35,16 @@ function withdrowRemains(creep: Creep, target: any) {
     } else {
       creep.say("moving...")
     }
-  } else if(withdrowAction === ERR_INVALID_TARGET){
+  } else if (withdrowAction === ERR_INVALID_TARGET) {
     console.log(creep.name + " Inv tgt", target);
     withdrowAction = creep.pickup(target);
+  } else if (withdrowAction === ERR_NOT_ENOUGH_RESOURCES) {
+    creep.say("Not enough energy");
+    cleanUpTargetsState(creep);
   } else if (withdrowAction !== OK) {
     console.log(creep.name + "  Rsc Another error", withdrowAction);
     console.log("Wdr target", target);
-    // cleanUpTargetsState(creep);
+    cleanUpTargetsState(creep);
   }
 };
 const haulerHandler: RoleHauler = {
@@ -75,9 +78,9 @@ const haulerHandler: RoleHauler = {
     let target: Tombstone | Ruin | null = null;
 
     if (tombStones.length > 0) {
-      target =  creep.pos.findClosestByRange( tombStones) ;
+      target = creep.pos.findClosestByRange(tombStones);
     } else if (ruins.length > 0) {
-      target =  creep.pos.findClosestByRange( ruins) ;
+      target = creep.pos.findClosestByRange(ruins);
     } else if (droppedResources.length > 0 && creep.memory.sourceTarget) {
       resourceTarget = _.find(droppedResources, r => r.id === creep.memory.sourceTarget)
     } else if (droppedResources.length > 0) {
@@ -100,8 +103,6 @@ const haulerHandler: RoleHauler = {
           // console.log(creep.name, "issue moving");
           console.log("move action", movingError)
           this.cleanUpTargetsState(creep);
-        } else {
-          creep.say("hl mvd")
         }
         // } else if (harvestAction === ERR_INVALID_TARGET) {
         //   console.log(creep.name + "  Rsc ERR_INVALID_TARGET");

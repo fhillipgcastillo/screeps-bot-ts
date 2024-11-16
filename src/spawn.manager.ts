@@ -118,11 +118,11 @@ const spawnManager = {
         if ((harvesters.length < 2
             || haulers.length < levelHandler.haulers.min)) {
             if (harvesters.length === 0) {
-                spawn.spawnCreep([WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
+                spawn.spawnCreep([WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else if (harvesters.length < levelHandler.harvesters.min && haulers.length !== 0 && harvesters.length % 2 !== 0) {
                 spawn.spawnCreep([WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else {
-                spawn.spawnCreep([CARRY, CARRY, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
+                spawn.spawnCreep([CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
             }
         } else {
 

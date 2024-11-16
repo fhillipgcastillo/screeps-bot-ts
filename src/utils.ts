@@ -65,7 +65,7 @@ function others() {
         h.memory.building = true;
     })
     // find extensions structures
-    Game.creeps["Harvester63959742"].room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION })
+    // Game.creeps["Harvester63959742"].room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION })
 
     // small builder
     // Game.spawns.Spawn1.spawnCreep([WORK, WORK, WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
@@ -76,12 +76,12 @@ function others() {
 }
 
 // Game.spawns.Spawn1.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Explorer' + Game.time, { memory: { role: 'explorer' } });
-Game.map.describeExits("W52S5")
-//W52S4,W51S5,W52S6,W53S5
-// get status of other rooms around
-Object.values(Game.map.describeExits("W52S5")).forEach(m => { console.log(m, JSON.stringify(Game.map.getRoomStatus(m))); console.log(Object.keys(Game.map.getRoomStatus(m))) })
+// Game.map.describeExits("W52S5")
+// //W52S4,W51S5,W52S6,W53S5
+// // get status of other rooms around
+// Object.values(Game.map.describeExits("W52S5")).forEach(m => { console.log(m, JSON.stringify(Game.map.getRoomStatus(m))); console.log(Object.keys(Game.map.getRoomStatus(m))) })
 
-Game.creeps["Builder63973072"]
+// Game.creeps["Builder63973072"]
 
 // function findRoomExit(creep: Creep, anotherRoomName: Room) {
 //     if (creep.room != anotherRoomName) {
