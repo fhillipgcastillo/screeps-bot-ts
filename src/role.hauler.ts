@@ -62,16 +62,21 @@ const haulerHandler: RoleHauler = {
     }
   },
   hauler: function (creep) {
+    let combineSources: (Tombstone | Ruin | Resource)[] = [];
+
     let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
       {
         filter: resource => resource.amount > 50
         // filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
       }
     );
-    const tombStones = creep.room.find(FIND_TOMBSTONES);
+    const tombStones = creep.room.find(FIND_TOMBSTONES, {
+      filter: r => r.store.energy > 0
+    });
     const ruins = creep.room.find(FIND_RUINS, {
       filter: r => r.store.energy > 0
     });
+    combineSources.concat(tombStones, ruins);
 
     let resourceTarget;
     let target: Tombstone | Ruin | null = null;
@@ -87,6 +92,9 @@ const haulerHandler: RoleHauler = {
       // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
       // resourceTarget = this.getClosestTarget(creep, availableTargets)
     }
+
+    // find the next source of energy from `combineSources` similar to what I did on harvesting when there it not path
+    // or implement a wanted logic to circle around the array of sources after we transfere what we found.
 
     if (target !== null) {
       withdrowRemains(creep, target);
