@@ -66,7 +66,7 @@ const haulerHandler: RoleHauler = {
 
     let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
       {
-        filter: resource => resource.amount > 50
+        filter: resource => resource.amount >= 10
         // filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
       }
     );

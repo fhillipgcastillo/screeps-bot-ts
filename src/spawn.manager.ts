@@ -3,6 +3,7 @@ import { levelDefinitions } from "./levels.handler";
 
 // const levelDefinitions = require("levels.handler");
 // Game
+
 const spawnManager = {
     run: function () {
         const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
@@ -45,7 +46,7 @@ const spawnManager = {
 
                 //auto spawn section
                 // Level 1 controller
-                if (currentLevel < 2 || harvesters.length < 2 || haulers.length <= 2) {
+                if (currentLevel < 2 || harvesters.length < 3 || haulers.length < 4) {
                     this.handleInitialRC(spawn)
                 } else if (currentLevel >= 2) {
                     var enemiesInRoom = spawn.room.find(FIND_HOSTILE_CREEPS);
@@ -59,21 +60,21 @@ const spawnManager = {
 
                         if (energyCapacity <= 300) {
                             if (rangers.length < levelHandler.rangers.min) {
-                                spawn.spawnCreep([RANGED_ATTACK, TOUGH, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
+                                spawn.spawnCreep([TOUGH, RANGED_ATTACK,  MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
                             } else if (defenders.length < levelHandler.defenders.min) {
-                                spawn.spawnCreep([ATTACK, ATTACK, TOUGH, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
+                                spawn.spawnCreep([TOUGH, ATTACK, ATTACK,  MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
                             }
                         } else if (energyCapacity >= 350) {
                             if (rangers.length < levelHandler.defenders.min) {
-                                spawn.spawnCreep([RANGED_ATTACK, RANGED_ATTACK, TOUGH, MOVE, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
+                                spawn.spawnCreep([TOUGH, RANGED_ATTACK, RANGED_ATTACK, MOVE, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
                             } else if (defenders.length < 2) {
-                                spawn.spawnCreep([ATTACK, ATTACK, TOUGH, MOVE, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
+                                spawn.spawnCreep([TOUGH, ATTACK, ATTACK, MOVE, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
                             }
                         } else {
                             if (rangers.length < levelHandler.rangers.max) {
-                                spawn.spawnCreep([RANGED_ATTACK, TOUGH, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
+                                spawn.spawnCreep([TOUGH, RANGED_ATTACK, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
                             } else if (defenders.length < levelHandler.defenders.max) {
-                                spawn.spawnCreep([ATTACK, TOUGH, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
+                                spawn.spawnCreep([TOUGH, ATTACK, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
                             }
                         }
                     }
@@ -93,8 +94,8 @@ const spawnManager = {
         const haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
         const builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder');
         const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
-        const defenders = _.filter(Game.creeps, (creep) => creep.memory.role == 'defender');
-        const rangers = _.filter(Game.creeps, (creep) => creep.memory.role == 'ranger');
+        // const defenders = _.filter(Game.creeps, (creep) => creep.memory.role == 'defender');
+        // const rangers = _.filter(Game.creeps, (creep) => creep.memory.role == 'ranger');
 
         const currentLevel = spawn.room?.controller ? spawn.room?.controller.level : 1;
         const lvlString: string = currentLevel.toString();
@@ -114,14 +115,12 @@ const spawnManager = {
         // after that start spawning the builders 2 or 3
         // after container is built, spawn the upgraders or jsut change the role of builders to upgraders or waint until certain point and start building Roads
 
-        if ((harvesters.length < 2
-            || haulers.length < levelHandler.haulers.min)) {
-            if (harvesters.length === 0) {
-                spawn.spawnCreep([WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (harvesters.length < levelHandler.harvesters.min && haulers.length !== 0 && harvesters.length % 2 !== 0) {
-                spawn.spawnCreep([WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
+        if ((harvesters.length < 2 || harvesters.length < levelHandler.harvesters.min
+            || haulers.length <= levelHandler.haulers.min)) {
+            if (harvesters.length === 0 || harvesters.length < levelHandler.harvesters.min && haulers.length !== 0 && harvesters.length % 2 !== 0) {
+                spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else {
-                spawn.spawnCreep([CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
+                spawn.spawnCreep([CARRY, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
             }
         } else {
 

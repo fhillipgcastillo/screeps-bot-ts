@@ -31,12 +31,12 @@ export type LevelDefinitions = {
 export const levelDefinitions:LevelDefinitions = {
     "1": {
         harvesters: {
-            min: 2,
-            max: 4
+            min: 3,
+            max: 6
         },
         builders: {
-            min: 2,
-            max: 4
+            min: 3,
+            max: 3
         },
         upgraders: {
             min: 1,
@@ -51,14 +51,14 @@ export const levelDefinitions:LevelDefinitions = {
             max: 2,
         },
         haulers: {
-            min: 3,
-            max: 4,
+            min: 9,
+            max: 15,
         }
     },
     "2": {
         harvesters: {
-            min: 2,
-            max: 8
+            min: 6,
+            max: 12
         },
         builders: {
             min: 2,
@@ -77,8 +77,8 @@ export const levelDefinitions:LevelDefinitions = {
             max: 5,
         },
         haulers: {
-            min: 3,
-            max: 8,
+            min: 12,
+            max: 24,
         }
     },
     "3": {
