@@ -32,7 +32,11 @@ export const levelDefinitions:LevelDefinitions = {
     "1": {
         harvesters: {
             min: 3,
-            max: 6
+            max: 3
+        },
+        haulers: {
+            min: 9,
+            max: 9,
         },
         builders: {
             min: 3,
@@ -50,10 +54,6 @@ export const levelDefinitions:LevelDefinitions = {
             min: 0,
             max: 2,
         },
-        haulers: {
-            min: 9,
-            max: 15,
-        }
     },
     "2": {
         harvesters: {
