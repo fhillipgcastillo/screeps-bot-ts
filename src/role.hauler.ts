@@ -100,7 +100,7 @@ const haulerHandler: RoleHauler = {
       withdrowRemains(creep, target);
     }
     else if (resourceTarget) {
-      creep.memory.sourceTarget = resourceTarget.id;
+      creep.memory.sourceTarget = resourceTarget?.id;
       let harvestAction = creep.pickup(resourceTarget as Resource);
 
       if (harvestAction == ERR_NOT_IN_RANGE) {
