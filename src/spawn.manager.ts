@@ -123,8 +123,7 @@ const spawnManager = {
                 || upgraders.length <= levelHandler.upgraders.min
             )
         )) {
-            console.log("second spawn condition")
-            if (harvesters.length < levelHandler.harvesters.min) {
+            if (harvesters.length < levelHandler.harvesters.min && harvesters.length % 3 === 0) {
                 // spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
                 spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else if (haulers.length < levelHandler.haulers.min) {
