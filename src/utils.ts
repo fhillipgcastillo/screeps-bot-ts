@@ -69,8 +69,8 @@ function others() {
     // harvester
     // Game.spawns.Spawn1.spawnCreep([WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } });
     // small builder
-    // Game.spawns.Spawn1.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
-    // Game.spawns.Spawn1.spawnCreep([WORK, WORK,  CARRY, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
+    // Game.spawns.Spawn1.spawnCreep([WORK, WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } });
+    // Game.spawns.Spawn1.spawnCreep([WORK, WORK,  CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
 
     // better builder 500energy
     // Game.spawns.Spawn1.spawnCreep([WORK, WORK, WORK, CARRY, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } });
@@ -83,6 +83,7 @@ function others() {
 // //W52S4,W51S5,W52S6,W53S5
 // // get status of other rooms around
 // Object.values(Game.map.describeExits("W52S5")).forEach(m => { console.log(m, JSON.stringify(Game.map.getRoomStatus(m))); console.log(Object.keys(Game.map.getRoomStatus(m))) })
+// Object.values(Game.map.describeExits("W8N3")).forEach(m => { console.log(m, JSON.stringify(Game.map.getRoomStatus(m))); console.log(Object.keys(Game.map.getRoomStatus(m))) })
 
 // Game.creeps["Builder63973072"]
 

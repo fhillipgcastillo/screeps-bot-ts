@@ -110,7 +110,7 @@ export const loop = () => {
       } else if (creep.memory.role == 'ranger') {
         roleRanger.run(creep);
       } else if (creep.memory.role === "explorer") {
-        roleExplorer.run(creep) //spawn
+        roleExplorer.run(creep, spawn) //spawn
       }
     }
   }
