@@ -198,10 +198,10 @@ const haulerHandler: RoleHauler = {
       }
     });
 
-    if (emptyExtensions.length > 0) {
-      targets = emptyExtensions;
-    } else if (storageAreFull >= 0.9 && containers.length > 0) {
+    if (storageAreFull >= 0.9 && containers.length > 0) {
       targets = containers;
+    } else if (emptyExtensions.length > 0) {
+      targets = emptyExtensions;
     } else {
       targets = structures;
     }
@@ -241,6 +241,8 @@ const haulerHandler: RoleHauler = {
       creep.memory.transfering = false;
       creep.memory.haulering = true;
       // creep.memory.idle = false;
+    } else {
+      console.log("din't fit")
     }
   },
 }
