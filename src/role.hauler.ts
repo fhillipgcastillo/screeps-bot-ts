@@ -88,6 +88,7 @@ const haulerHandler: RoleHauler = {
     } else if (droppedResources.length > 0 && creep.memory.sourceTarget) {
       resourceTarget = _.find(droppedResources, r => r.id === creep.memory.sourceTarget)
     } else if (droppedResources.length > 0) {
+      console.log("no source target");
       resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
       // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
       // resourceTarget = this.getClosestTarget(creep, availableTargets)
@@ -151,7 +152,13 @@ const haulerHandler: RoleHauler = {
   },
   getNextClosestTarget(creep, targets) {
     // this.shouldResetPrevTargets(creep, targets);
-    let availableTargets = _.filter(targets, (source) => source.id !== creep.memory.sourceTarget);
+    let availableTargets;
+
+    if(!creep.memory.sourceTarget && creep.memory.prevSourceTarget) {
+      availableTargets = _.filter(targets, (source) => source.id !== creep.memory.prevSourceTarget);
+    } else {
+      availableTargets = _.filter(targets, (source) => source.id !== creep.memory.sourceTarget);
+    }
     let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
     // let availableTargets = _.filter(targets, (source) => !creep.memory.prevTargets.includes(source.id));
     // let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
@@ -204,8 +211,10 @@ const haulerHandler: RoleHauler = {
       if (target) {
         let transferAction = target && creep.transfer(target, RESOURCE_ENERGY);
 
-        if (transferAction == ERR_NOT_IN_RANGE) {
+        if (transferAction === ERR_NOT_IN_RANGE) {
           creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+        } else if(transferAction === OK) {
+          this.cleanUpTargetsState(creep);
         } else {
           // console.log(creep.name+" transferAction", transferAction);
           // this.cleanUpTargetsState(creep);
