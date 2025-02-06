@@ -151,7 +151,7 @@ const roleBuilder: RoleBuilder = {
             // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
         });
 
-        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store.getFreeCapacity() === 0 })
+        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0 })
         let container = containers ? creep.pos.findClosestByRange(containers) : null;
         if (extensions.length > 0) {
             let theExtension = creep.pos.findClosestByRange(extensions);
