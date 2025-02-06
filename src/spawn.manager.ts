@@ -173,7 +173,6 @@ const spawnManager = {
                 spawn.spawnCreep([WORK, WORK, CARRY, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
             }
             return;
-
         } else if (energyCapacity <= 300 && enoughCreeps) {
             if (harvesters.length < levelHandler.harvesters.max && harvesters.length > 1 && haulers.length > 4) {
                 spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
