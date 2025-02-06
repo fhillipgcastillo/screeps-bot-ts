@@ -154,7 +154,7 @@ const haulerHandler: RoleHauler = {
     // this.shouldResetPrevTargets(creep, targets);
     let availableTargets;
 
-    if(!creep.memory.sourceTarget && creep.memory.prevSourceTarget) {
+    if (!creep.memory.sourceTarget && creep.memory.prevSourceTarget) {
       availableTargets = _.filter(targets, (source) => source.id !== creep.memory.prevSourceTarget);
     } else {
       availableTargets = _.filter(targets, (source) => source.id !== creep.memory.sourceTarget);
@@ -175,14 +175,19 @@ const haulerHandler: RoleHauler = {
   transfer(creep) {
     let targets = undefined;
     if (!this.spawn) return;
-
+    _.sortByOrder
     const storageAreFull = this.spawn.store.getUsedCapacity(RESOURCE_ENERGY) / this.spawn.store.getCapacity(RESOURCE_ENERGY);
-    const containers = creep.room.find(FIND_STRUCTURES, {
-      filter: (s) =>
-        s.structureType === STRUCTURE_CONTAINER
-        && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-      // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
-    });
+    const containers: StructureContainer[] = _.sortByOrder(
+      creep.room.find(FIND_STRUCTURES, {
+        filter: (s) =>
+          s.structureType === STRUCTURE_CONTAINER
+          && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
+        // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
+      }),
+      (c) => c.store.getFreeCapacity(RESOURCE_ENERGY),
+      'asc'
+    );
+
     const emptyExtensions = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
         return structure.structureType == STRUCTURE_EXTENSION &&
@@ -213,7 +218,7 @@ const haulerHandler: RoleHauler = {
 
         if (transferAction === ERR_NOT_IN_RANGE) {
           creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
-        } else if(transferAction === OK) {
+        } else if (transferAction === OK) {
           this.cleanUpTargetsState(creep);
         } else {
           // console.log(creep.name+" transferAction", transferAction);
