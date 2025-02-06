@@ -121,7 +121,7 @@ const spawnManager = {
                 || upgraders.length <= levelHandler.upgraders.min
             )
         )) {
-            if (harvesters.length < levelHandler.harvesters.min && haulers.length % 3 === 0) {
+            if (harvesters.length < 1 || harvesters.length < levelHandler.harvesters.min && haulers.length % 3 === 0) {
                 // spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
                 spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else if (haulers.length < levelHandler.haulers.min) {
@@ -163,7 +163,7 @@ const spawnManager = {
         const energyCapacity = spawn.room.energyCapacityAvailable;
 
         if (energyCapacity <= 300 && !enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.min && harvesters.length % 3 === 0) {
+            if (harvesters.length < levelHandler.harvesters.min && haulers.length % 3 === 0) {
                 spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else if (haulers.length < levelHandler.haulers.min) {
                 spawn.spawnCreep([CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
@@ -212,7 +212,7 @@ const spawnManager = {
             return;
         }
         if (energyCapacity > 400 && energyCapacity < 450 && !enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.min && harvesters.length > 1 && haulers.length > 2) {
+            if (harvesters.length < levelHandler.harvesters.min && harvesters.length > 1 && haulers.length % 2) {
                 spawn.spawnCreep([WORK, WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
             } else if (builders.length < levelHandler.builders.min) {
                 spawn.spawnCreep([WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
@@ -221,7 +221,7 @@ const spawnManager = {
             }
         } else {
             if (energyCapacity >= 451 && energyCapacity <= 500 && enoughCreeps) {
-                if (harvesters.length < levelHandler.harvesters.max && harvesters.length > 1 && haulers.length > 4) {
+                if (harvesters.length < levelHandler.harvesters.max && harvesters.length > 1 && haulers.length % 4) {
                     spawn.spawnCreep([WORK, WORK, WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
                 } else if (builders.length < levelHandler.builders.max) {
                     spawn.spawnCreep([WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
@@ -293,6 +293,8 @@ const spawnManager = {
             } else if (builders.length < levelHandler.builders.max) {
                 spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
             }
+        } else {
+            console.log("No more energy")
         }
     }
 };
