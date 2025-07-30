@@ -10,7 +10,12 @@ type RoleHauler = {
 const roleUpgrader: RoleHauler = {
     /** @param {Creep} creep **/
     run: function (creep) {
-        // creep.say(creep.name);
+        creep.say("I'm " + creep.name);
+
+        if (!Object.keys(creep.memory).includes("upgrading")) {
+            creep.memory.upgrading = false;
+            creep.memory.harvesting = true;
+        }
 
         if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] == 0) {
             creep.memory.upgrading = false;
@@ -25,6 +30,7 @@ const roleUpgrader: RoleHauler = {
         const controller = creep.room.controller;
 
         if (creep.memory.upgrading && controller) {
+            console.log(creep.name, "upgrading controller", controller);
             const upgradeAction = creep.upgradeController(controller);
             if (upgradeAction == ERR_NOT_IN_RANGE) {
                 creep.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
@@ -34,10 +40,12 @@ const roleUpgrader: RoleHauler = {
                 //     console.log("didn't upgrade", upgradeAction)
             }
         } else if (creep.memory.harvesting) {
+            console.log(creep.name, "harvesting");
             this.pickUpEnergy(creep);
         }
     },
     pickUpEnergy(creep) {
+        console.log("finding energy for", creep.name, "from containers");
         var containers = creep.room.find(FIND_STRUCTURES, {
             filter: (s) =>
                 s.structureType === STRUCTURE_CONTAINER

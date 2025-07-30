@@ -241,6 +241,6 @@ const roleBuilder: RoleBuilder = {
             return undefined;
         }
     },
-};
+} as RoleBuilder;
 
 export default roleBuilder;

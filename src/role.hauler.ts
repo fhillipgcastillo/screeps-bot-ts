@@ -246,9 +246,9 @@ const haulerHandler: RoleHauler = {
       creep.memory.transfering = false;
       creep.memory.haulering = true;
       // creep.memory.idle = false;
-    } else {
-      console.log("din't fit")
-    }
+    } /*else {
+      console.log("didn't fit")
+    }*/
   },
 }
 export default haulerHandler;
