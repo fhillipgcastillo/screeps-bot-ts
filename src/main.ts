@@ -115,3 +115,8 @@ export const loop = () => {
     }
   }
 };
+
+// to use the the following methods fromt he CLI/Terminal/Console we need to import the main then we get access to those
+// for example: `require('main').spawnManager`
+// we could also change to use `Game.creepManager = require('CreepManager');`
+export { spawnManager, roleHarvester, roleHauler, roleUpgrader, roleBuilder, roleExplorer, roleDefender, roleRanger };

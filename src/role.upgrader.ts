@@ -5,73 +5,93 @@ import { findClosestContainer, getContainers } from "./utils";
 type RoleHauler = {
     run: (creep: Creep) => void,
     pickUpEnergy: (creep: Creep) => void,
+    stateSetter: (creep: Creep) => void,
+    stateHandler: (creep: Creep) => void,
+    memorizedPrevTargets?: (creep: Creep) => void,
+    cleanUpTargetsState?: (creep: Creep) => void,
+    getClosestTarget?: (creep: Creep, targets: any[]) => any,
+    shouldResetPrevTargets?: (creep: Creep, targets: any[]) => void,
+    getNextClosestTarget?: (creep: Creep, targets: any[]) => any,
+    getAppropiateResourceTarget?: (creep: Creep, targets: any[]) => any,
 };
 
 const roleUpgrader: RoleHauler = {
     /** @param {Creep} creep **/
     run: function (creep) {
-        creep.say("I'm " + creep.name);
-
-        if (!Object.keys(creep.memory).includes("upgrading")) {
-            creep.memory.upgrading = false;
-            creep.memory.harvesting = true;
+        try {
+            this.stateSetter(creep);
+            this.stateHandler(creep);
+        } catch (error) {
+            console.log(`${creep.name} upgrader error:`, error);
         }
-
-        if (creep.memory.upgrading && creep.store[RESOURCE_ENERGY] == 0) {
-            creep.memory.upgrading = false;
+    },
+    stateSetter: function (creep) {
+        if (creep.store.getFreeCapacity() > 0 && !creep.memory.upgrading) {
             creep.memory.harvesting = true;
-            creep.say('🔄 harvest');
-        }
-        if (!creep.memory.upgrading && creep.store.getFreeCapacity() == 0) {
+            creep.memory.upgrading = false;
+        } else if (creep.store.getFreeCapacity() === 0 && !creep.memory.upgrading) {
             creep.memory.upgrading = true;
             creep.memory.harvesting = false;
-            creep.say('⚡ upgrade');
+        } else if (creep.store[RESOURCE_ENERGY] === 0 && creep.memory.upgrading) {
+            creep.memory.upgrading = false;
+            creep.memory.harvesting = true;
         }
-        const controller = creep.room.controller;
-
-        if (creep.memory.upgrading && controller) {
-            console.log(creep.name, "upgrading controller", controller);
-            const upgradeAction = creep.upgradeController(controller);
-            if (upgradeAction == ERR_NOT_IN_RANGE) {
-                creep.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
-            } else if (upgradeAction === ERR_NO_BODYPART) {
-                creep.say("No Body part")
-                // } else {
-                //     console.log("didn't upgrade", upgradeAction)
-            }
-        } else if (creep.memory.harvesting) {
-            console.log(creep.name, "harvesting");
+    },
+    stateHandler: function (creep) {
+        if (creep.memory.harvesting) {
             this.pickUpEnergy(creep);
+        } else if (creep.memory.upgrading) {
+            const controller = creep.room.controller;
+            if (controller) {
+                if (creep.upgradeController(controller) === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(controller, { visualizePathStyle: { stroke: '#ffffff' } });
+                }
+            }
         }
     },
     pickUpEnergy(creep) {
-        console.log("finding energy for", creep.name, "from containers");
-        var containers = creep.room.find(FIND_STRUCTURES, {
+        let energySource = undefined;
+
+        // Find containers with energy
+        const containers = creep.room.find(FIND_STRUCTURES, {
             filter: (s) =>
                 s.structureType === STRUCTURE_CONTAINER
                 && s.store[RESOURCE_ENERGY] > 300
-            // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
         });
 
-        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0 })
-        let container = containers ? creep.pos.findClosestByRange(containers) : null;
-        if (extensions.length > 0) {
-            let theExtension = creep.pos.findClosestByRange(extensions);
+        // Find extensions with energy
+        const extensions = creep.room.find(FIND_MY_STRUCTURES, {
+            filter: (s) =>
+                s.structureType === STRUCTURE_EXTENSION
+                && s.store[RESOURCE_ENERGY] > 0
+        });
 
-            if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
+        // Find spawn
+        const spawn = Game.spawns.Spawn1;
+
+        // Prioritize energy sources
+        if (containers.length > 0) {
+            energySource = creep.pos.findClosestByRange(containers);
+        } else if (extensions.length > 0) {
+            energySource = creep.pos.findClosestByRange(extensions);
+        } else if (spawn && spawn.store.getUsedCapacity(RESOURCE_ENERGY) > 100) {
+            // Only use spawn if it has more than 100 energy
+            energySource = spawn;
         }
-        else if (container) {
-            const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
-            if (withdrawAction === ERR_NOT_IN_RANGE) {
-                creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
+
+        // If we found an energy source, try to withdraw from it
+        if (energySource) {
+            const withdrawResult = creep.withdraw(energySource, RESOURCE_ENERGY);
+
+            if (withdrawResult === ERR_NOT_IN_RANGE) {
+                creep.moveTo(energySource, {
+                    visualizePathStyle: { stroke: '#ffaa00' }
+                });
+            } else if (withdrawResult !== OK) {
+                console.log(`${creep.name} withdraw error:`, withdrawResult);
             }
-        } else if (!container || !extensions) {
-            let spawn = Game.spawns.Spawn1;
-            if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
+        } else {
+            creep.say('No energy!');
         }
 
         // var droppedResources = creep.room.find(FIND_DROPPED_RESOURCES, {

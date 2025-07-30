@@ -3,7 +3,7 @@ import { levelDefinitions } from "./levels.handler";
 
 // const levelDefinitions = require("levels.handler");
 // Game
-
+// to do: need to extract te spawn of each role on their own methods/file.
 const spawnManager = {
     run: function () {
         const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
