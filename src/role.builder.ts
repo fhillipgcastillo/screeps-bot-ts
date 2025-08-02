@@ -151,18 +151,21 @@ const roleBuilder: RoleBuilder = {
             // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
         });
 
-        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store.getFreeCapacity() === 0 })
-        let container = creep.pos.findClosestByRange(containers);
+        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0 })
+        let container = containers ? creep.pos.findClosestByRange(containers) : null;
         if (extensions.length > 0) {
-            let theextension = creep.pos.findClosestByRange(extensions);
+            let theExtension = creep.pos.findClosestByRange(extensions);
 
-            if (theextension && creep.withdraw(theextension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(theextension, { visualizePathStyle: { stroke: '#ffaa00' } });
+            if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
         }
-        else if (container && creep.withdraw(container, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-            creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
-        } else {
+        else if (container) {
+            const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
+            if (withdrawAction === ERR_NOT_IN_RANGE) {
+                creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
+            }
+        } else if (!container || !extensions) {
             let spawn = Game.spawns.Spawn1;
             if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
@@ -238,6 +241,6 @@ const roleBuilder: RoleBuilder = {
             return undefined;
         }
     },
-};
+} as RoleBuilder;
 
 export default roleBuilder;
