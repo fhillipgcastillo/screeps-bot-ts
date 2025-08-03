@@ -9,6 +9,7 @@ import roleBuilder from "./role.builder";
 import roleExplorer from "role.explorer";
 import roleDefender from "role.defender";
 import roleRanger from "role.ranger";
+import { GameManager } from "GameManager";
 
 // declare global {
 //   /*
@@ -42,6 +43,7 @@ import roleRanger from "role.ranger";
 //   namespace NodeJS {
 //     interface Global {
 //       log: any;
+//      gm: GameManager;
 //     }
 //   }
 // }
@@ -50,73 +52,13 @@ import roleRanger from "role.ranger";
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 // every 20 ticks, reset creeps action memory
 // export const loop = ErrorMapper.wrapLoop(() => {
+const gm =  GameManager.getInstance()
 export const loop = () => {
-  // console.log(`Current game tick is ${Game.time}`);
-
-  const activeCreeps = _.filter(Game.creeps, ((creep: Creep) => !creep.spawning));
-
-  for (var creepName in Memory.creeps) {
-    if (!Game.creeps[creepName]) {
-      delete Memory.creeps[creepName];
-      console.log('Clearing non-existing creep memory:', creepName);
-    }
-  }
-  // Game.map.visual.text("Target💥", new RoomPosition(10,16,Object.keys(Game.rooms)[0]), {color: '#FF0000', fontSize: 19});
-
-  // auto spawn harvesters
-  spawnManager.run();
-  for (let name in Game.spawns) {
-    const spawn = Game.spawns[name];
-
-    if (spawn.room?.controller) {
-      //auto activate safe mode
-      // if (spawn.room.controller.level >= 2 && spawn.room.controller.safeModeAvailable) {
-      //   spawn.room.controller.activateSafeMode();
-      // }
-      //   // if (spawn.room.controller.level === 3) {
-      //   const towers = spawn.room.find(FIND_STRUCTURES, {
-      //     filter: (c) => c.structureType === STRUCTURE_TOWER
-      //   })// as StructureTower[];
-      //   for (let i in towers) {
-      //     const tower = towers[i];
-      //     if (tower) {
-      //       // heal
-      //       var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, { filter: (structure) => structure.hits < structure.hitsMax })
-      //       if (closestDamagedStructure) {
-      //         tower.repair(closestDamagedStructure);
-      //       }
-
-      //       // attack
-      //       var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-      //       if (closestHostile) {
-      //         tower.attack(closestHostile);
-      //       }
-
-      //     }
-    }
-
-    for (var creepName in activeCreeps) {
-      var creep = activeCreeps[creepName];
-      if (creep.memory.role == 'harvester') {
-        roleHarvester.run(creep);
-      } else if (creep.memory.role == 'hauler') {
-        roleHauler.run(creep);
-      } else if (creep.memory.role == 'upgrader') {
-        roleUpgrader.run(creep);
-      } else if (creep.memory.role == 'builder') {
-        roleBuilder.run(creep);
-      } else if (creep.memory.role == 'defender') {
-        roleDefender.run(creep);
-      } else if (creep.memory.role == 'ranger') {
-        roleRanger.run(creep);
-      } else if (creep.memory.role === "explorer") {
-        roleExplorer.run(creep, spawn) //spawn
-      }
-    }
-  }
+  gm.tick();
 };
 
 // to use the the following methods fromt he CLI/Terminal/Console we need to import the main then we get access to those
 // for example: `require('main').spawnManager`
 // we could also change to use `Game.creepManager = require('CreepManager');`
-export { spawnManager, roleHarvester, roleHauler, roleUpgrader, roleBuilder, roleExplorer, roleDefender, roleRanger };
+// export { spawnManager, roleHarvester, roleHauler, roleUpgrader, roleBuilder, roleExplorer, roleDefender, roleRanger };
+global.gm = gm;

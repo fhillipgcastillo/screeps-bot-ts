@@ -1,3 +1,5 @@
+import { GameManager } from "GameManager";
+
 declare global {
    /*
     Example types, expand on these or remove them and add your own.
@@ -30,6 +32,7 @@ declare global {
   namespace NodeJS {
     interface Global {
       log: any;
+      gm: GameManager;
     }
   }
 }
