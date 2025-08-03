@@ -1,3 +1,5 @@
+import { debugLog } from "./utils/Logger";
+
 function run(creep:Creep): void {
     let enemiesInRoom = creep.room.find(FIND_HOSTILE_CREEPS);
     const enemyStructures = Game.spawns.Spawn1.room.find(FIND_HOSTILE_STRUCTURES);
@@ -19,7 +21,7 @@ function run(creep:Creep): void {
         }
     } else {
         // dispawn or moveback
-        console.log("defender nothing");
+        debugLog.debug("defender nothing");
     }
 }
 function attackOrMove(creep:Creep, target: Creep | AnyStructure) {

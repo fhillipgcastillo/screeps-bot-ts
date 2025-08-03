@@ -1,122 +1,115 @@
-import { ErrorMapper } from "utils/ErrorMapper";
-// import * as _ from "lodash";
-
-import spawnManager from "./spawn.manager";
-import roleHarvester from "./role.harvester_stationary";
-import roleHauler from "./role.hauler";
-import roleUpgrader from "./role.upgrader";
-import roleBuilder from "./role.builder";
-import roleExplorer from "role.explorer";
-import roleDefender from "role.defender";
-import roleRanger from "role.ranger";
-
-// declare global {
-//   /*
-//     Example types, expand on these or remove them and add your own.
-//     Note: Values, properties defined here do no fully *exist* by this type definiton alone.
-//           You must also give them an implemention if you would like to use them. (ex. actually setting a `role` property in a Creeps memory)
-
-//     Types added in this `global` block are in an ambient, global context. This is needed because `main.ts` is a module file (uses import or export).
-//     Interfaces matching on name from @types/screeps will be merged. This is how you can extend the 'built-in' interfaces from @types/screeps.
-//   */
-//   // Memory extension samples
-//   interface Memory {
-//     uuid: number;
-//     log: any;
-//   }
-
-//   interface CreepMemory {
-//     role: string;
-//     room: string;
-//     working: boolean;
-
-//     [name: string]: any;
-//     building?: boolean;
-//     upgrading?: boolean;
-//     target?: Id<_HasId>;
-//     harvesting?: boolean;
-//     source?: Id<Source>;
-//   }
-
-//   // Syntax for adding proprties to `global` (ex "global.log")
-//   namespace NodeJS {
-//     interface Global {
-//       log: any;
-//     }
-//   }
-// }
+import { GameManager } from "GameManager";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 // every 20 ticks, reset creeps action memory
 // export const loop = ErrorMapper.wrapLoop(() => {
+const gm =  new GameManager()
 export const loop = () => {
-  // console.log(`Current game tick is ${Game.time}`);
-
-  const activeCreeps = _.filter(Game.creeps, ((creep: Creep) => !creep.spawning));
-
-  for (var creepName in Memory.creeps) {
-    if (!Game.creeps[creepName]) {
-      delete Memory.creeps[creepName];
-      console.log('Clearing non-existing creep memory:', creepName);
-    }
-  }
-  // Game.map.visual.text("Target💥", new RoomPosition(10,16,Object.keys(Game.rooms)[0]), {color: '#FF0000', fontSize: 19});
-
-  // auto spawn harvesters
-  spawnManager.run();
-  for (let name in Game.spawns) {
-    const spawn = Game.spawns[name];
-
-    if (spawn.room?.controller) {
-      //auto activate safe mode
-      // if (spawn.room.controller.level >= 2 && spawn.room.controller.safeModeAvailable) {
-      //   spawn.room.controller.activateSafeMode();
-      // }
-      //   // if (spawn.room.controller.level === 3) {
-      //   const towers = spawn.room.find(FIND_STRUCTURES, {
-      //     filter: (c) => c.structureType === STRUCTURE_TOWER
-      //   })// as StructureTower[];
-      //   for (let i in towers) {
-      //     const tower = towers[i];
-      //     if (tower) {
-      //       // heal
-      //       var closestDamagedStructure = tower.pos.findClosestByRange(FIND_STRUCTURES, { filter: (structure) => structure.hits < structure.hitsMax })
-      //       if (closestDamagedStructure) {
-      //         tower.repair(closestDamagedStructure);
-      //       }
-
-      //       // attack
-      //       var closestHostile = tower.pos.findClosestByRange(FIND_HOSTILE_CREEPS);
-      //       if (closestHostile) {
-      //         tower.attack(closestHostile);
-      //       }
-
-      //     }
-    }
-
-    for (var creepName in activeCreeps) {
-      var creep = activeCreeps[creepName];
-      if (creep.memory.role == 'harvester') {
-        roleHarvester.run(creep);
-      } else if (creep.memory.role == 'hauler') {
-        roleHauler.run(creep);
-      } else if (creep.memory.role == 'upgrader') {
-        roleUpgrader.run(creep);
-      } else if (creep.memory.role == 'builder') {
-        roleBuilder.run(creep);
-      } else if (creep.memory.role == 'defender') {
-        roleDefender.run(creep);
-      } else if (creep.memory.role == 'ranger') {
-        roleRanger.run(creep);
-      } else if (creep.memory.role === "explorer") {
-        roleExplorer.run(creep, spawn) //spawn
-      }
-    }
-  }
+  gm.tick();
 };
 
-// to use the the following methods fromt he CLI/Terminal/Console we need to import the main then we get access to those
-// for example: `require('main').spawnManager`
-// we could also change to use `Game.creepManager = require('CreepManager');`
-export { spawnManager, roleHarvester, roleHauler, roleUpgrader, roleBuilder, roleExplorer, roleDefender, roleRanger };
+
+import {
+  spawnCreep,
+  spawnHarvester,
+  spawnHauler,
+  spawnBuilder,
+  spawnUpgrader,
+  spawnDefender,
+  spawnRanger,
+  spawnExplorer,
+  getSpawnStatus,
+  getAllSpawnStatuses,
+  getCurrentCreepCounts,
+  needsMoreCreeps,
+  getBodyPreview,
+  getManualSpawner
+} from "./manual.spawner";
+
+import {
+  showCreeps,
+  showRooms,
+  showStats,
+  showVisual,
+  getStats,
+  creeps,
+  rooms,
+  toggleVisual,
+  updateVisualOverlay,
+  helpUI,
+  getGameStatsUI
+} from "./ui";
+
+// Re-export for external use
+export {
+  spawnCreep,
+  spawnHarvester,
+  spawnHauler,
+  spawnBuilder,
+  spawnUpgrader,
+  spawnDefender,
+  spawnRanger,
+  spawnExplorer,
+  getSpawnStatus,
+  getAllSpawnStatuses,
+  getCurrentCreepCounts,
+  needsMoreCreeps,
+  getBodyPreview,
+  getManualSpawner,
+  // UI functions
+  showCreeps,
+  showRooms,
+  showStats,
+  showVisual,
+  getStats,
+  creeps,
+  rooms,
+  toggleVisual,
+  updateVisualOverlay,
+  helpUI,
+  getGameStatsUI
+};
+
+// Export debug functions for external use
+export const enableDebug = () => gm.enableDebug();
+export const disableDebug = () => gm.disableDebug();
+export const toggleDebug = () => gm.toggleDebug();
+export const isDebugEnabled = () => gm.isDebugEnabled();
+
+global.gm = gm;
+
+// Assign debug functions to global for console access
+global.enableDebug = () => gm.enableDebug();
+global.disableDebug = () => gm.disableDebug();
+global.toggleDebug = () => gm.toggleDebug();
+global.isDebugEnabled = () => gm.isDebugEnabled();
+
+// Assign manual spawner functions to global for console access
+global.spawnCreep = spawnCreep;
+global.spawnHarvester = spawnHarvester;
+global.spawnHauler = spawnHauler;
+global.spawnBuilder = spawnBuilder;
+global.spawnUpgrader = spawnUpgrader;
+global.spawnDefender = spawnDefender;
+global.spawnRanger = spawnRanger;
+global.spawnExplorer = spawnExplorer;
+global.getSpawnStatus = getSpawnStatus;
+global.getAllSpawnStatuses = getAllSpawnStatuses;
+global.getCurrentCreepCounts = getCurrentCreepCounts;
+global.needsMoreCreeps = needsMoreCreeps;
+global.getBodyPreview = getBodyPreview;
+global.getManualSpawner = getManualSpawner;
+
+// Assign UI functions to global for console access
+global.showCreeps = showCreeps;
+global.showRooms = showRooms;
+global.showStats = showStats;
+global.showVisual = showVisual;
+global.getStats = getStats;
+global.creeps = creeps;
+global.rooms = rooms;
+global.toggleVisual = toggleVisual;
+global.helpUI = helpUI;
+global.getGameStatsUI = getGameStatsUI;
+

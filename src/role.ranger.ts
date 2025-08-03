@@ -1,3 +1,5 @@
+import { debugLog } from "./utils/Logger";
+
 /** @param {Creep} creep **/
 function run(creep: Creep) {
     let enemiesInRoom = creep.room.find(FIND_HOSTILE_CREEPS);
@@ -28,7 +30,7 @@ function attackOrMove(creep: Creep, target: Creep | AnyStructure) {
     if (enemyInRange == ERR_NOT_IN_RANGE) {
         // creep.say("Mv2Etgt ");
         const moveAction = creep.moveTo(target, { visualizePathStyle: { stroke: "#ee0000" } })
-        console.log(creep.name, "move action "+moveAction);
+        debugLog.debug(creep.name, "move action "+moveAction);
     }
     return enemyInRange;
 };

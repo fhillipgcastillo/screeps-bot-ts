@@ -42,6 +42,21 @@ Finally, there are also NPM scripts that serve as aliases for these commands in 
 
 The type definitions for Screeps come from [typed-screeps](https://github.com/screepers/typed-screeps). If you find a problem or have a suggestion, please open an issue there.
 
+## TO DO:
+* Re-organize | Clean | Refactor | Improve  the code
+  * Add the global exports
+    * Re-organize the things to be able to access them from the terminal, so we can activate things, call certain spawns, etc.
+  * create a class for the main logic handling
+  * Try applying some kind of patterns like SOLID, Repository like patterns, etc
+* INstall auth mod to the server, for easier private ode transfer
+  * Add my pass
+  * get credential configuration
+  * test deploy to private/local server works
+  * Document hte right process
+* Add the hability to consider other, nearby, rooms with resources to harvest and pick up energy from
+* Run things by tasks, for the creeps, so we can have a better control of what they are doing and be able to se what they have pending, etc
+  * I want to be able to see for example the spanwn pending things, like which spawn will be next
+
 ## Documentation
 
 We've also spent some time reworking the documentation from the ground-up, which is now generated through [Gitbooks](https://www.gitbook.com/). Includes all the essentials to get you up and running with Screeps AI development in TypeScript, as well as various other tips and tricks to further improve your development workflow.

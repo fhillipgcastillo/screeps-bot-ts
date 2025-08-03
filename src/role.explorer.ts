@@ -1,3 +1,5 @@
+import { debugLog } from "./utils/Logger";
+
 function getExitRoomNames(fromRoom: string) {
   return Game.map.describeExits(fromRoom);
 }
@@ -96,10 +98,10 @@ function explorer(creep: Creep, spawn: StructureSpawn) {
     creep.moveByPath(creep.pos.findPathTo(target));
   } else {
     let foundSources = creep.room.find(FIND_SOURCES);
-    console.log("found source", foundSources)
+    debugLog.debug("found source", foundSources)
     if (!creep.memory.sourceTarget) {
       let sourceTarget = creep.pos.findClosestByRange(foundSources);
-      if (sourceTarget) {
+      if (sourceTarget &&  creep.memory.nextRole) {
         creep.memory.role = creep.memory.nextRole;
         // creep.memory.nextRole = "harvester";
         // creep.memory.sourceTarget = sourceTarget?.id;
