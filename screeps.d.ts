@@ -96,6 +96,12 @@ declare global {
       toggleVisual: () => void;
       helpUI: () => void;
       getGameStatsUI: () => GameStatsUI;
+
+      // Debug Logging Functions - accessible from game console
+      enableDebug: () => void;
+      disableDebug: () => void;
+      toggleDebug: () => void;
+      isDebugEnabled: () => boolean;
     }
   }
 }

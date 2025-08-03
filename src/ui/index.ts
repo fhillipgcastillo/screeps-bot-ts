@@ -1,4 +1,5 @@
 import { GameStatsUI, getGameStatsUI, UIDisplayOptions } from "./GameStatsUI";
+import { debugLog } from "../utils/Logger";
 
 // Re-export the main UI class and types
 export { GameStatsUI, getGameStatsUI, UIDisplayOptions };
@@ -45,12 +46,12 @@ export function showStats(options?: UIDisplayOptions): void {
 export function showVisual(roomName?: string, x?: number, y?: number): void {
   const ui = getGameStatsUI();
   const targetRoom = roomName || Object.keys(Game.rooms)[0];
-  
+
   if (!targetRoom) {
-    console.log("No rooms available for visual display");
+    debugLog.warn("No rooms available for visual display");
     return;
   }
-  
+
   ui.displayVisualOverlay(targetRoom, x, y);
 }
 
@@ -68,11 +69,11 @@ export function getStats() {
  * Usage: creeps()
  */
 export function creeps(): void {
-  showCreeps({ 
-    compact: true, 
-    showHeader: false, 
+  showCreeps({
+    compact: true,
+    showHeader: false,
     showEmptyRoles: false,
-    colorize: true 
+    colorize: true
   });
 }
 
@@ -81,9 +82,9 @@ export function creeps(): void {
  * Usage: rooms()
  */
 export function rooms(): void {
-  showRooms({ 
+  showRooms({
     showHeader: false,
-    colorize: true 
+    colorize: true
   });
 }
 
@@ -94,13 +95,13 @@ export function rooms(): void {
 let visualEnabled = false;
 export function toggleVisual(): void {
   visualEnabled = !visualEnabled;
-  console.log(`Visual overlay ${visualEnabled ? 'enabled' : 'disabled'}`);
-  
+  debugLog.info(`Visual overlay ${visualEnabled ? 'enabled' : 'disabled'}`);
+
   if (!visualEnabled) {
     // Clear visuals by not drawing anything
     return;
   }
-  
+
   // Enable visuals for all rooms
   for (const roomName of Object.keys(Game.rooms)) {
     showVisual(roomName);
@@ -112,7 +113,7 @@ export function toggleVisual(): void {
  */
 export function updateVisualOverlay(): void {
   if (!visualEnabled) return;
-  
+
   for (const roomName of Object.keys(Game.rooms)) {
     showVisual(roomName);
   }
@@ -140,6 +141,12 @@ export function helpUI(): void {
 <span style='color:#ffff00'>Data Access:</span>
   <span style='color:#66ff66'>getStats()</span>       - Get raw statistics object
 
+<span style='color:#ffff00'>Debug Logging:</span>
+  <span style='color:#66ff66'>enableDebug()</span>    - Enable debug console output
+  <span style='color:#66ff66'>disableDebug()</span>   - Disable debug console output
+  <span style='color:#66ff66'>toggleDebug()</span>    - Toggle debug mode on/off
+  <span style='color:#66ff66'>isDebugEnabled()</span> - Check if debug mode is active
+
 <span style='color:#ffff00'>Options (for showCreeps, showRooms, showStats):</span>
   { compact: true }        - Compact display format
   { showEmptyRoles: true } - Show roles with 0 creeps
@@ -151,6 +158,6 @@ export function helpUI(): void {
   showStats({ colorize: false })
   showVisual('W1N1', 10, 5)
 `;
-  
+
   console.log(helpText);
 }

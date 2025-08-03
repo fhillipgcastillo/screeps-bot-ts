@@ -71,7 +71,19 @@ export {
   getGameStatsUI
 };
 
+// Export debug functions for external use
+export const enableDebug = () => gm.enableDebug();
+export const disableDebug = () => gm.disableDebug();
+export const toggleDebug = () => gm.toggleDebug();
+export const isDebugEnabled = () => gm.isDebugEnabled();
+
 global.gm = gm;
+
+// Assign debug functions to global for console access
+global.enableDebug = () => gm.enableDebug();
+global.disableDebug = () => gm.disableDebug();
+global.toggleDebug = () => gm.toggleDebug();
+global.isDebugEnabled = () => gm.isDebugEnabled();
 
 // Assign manual spawner functions to global for console access
 global.spawnCreep = spawnCreep;

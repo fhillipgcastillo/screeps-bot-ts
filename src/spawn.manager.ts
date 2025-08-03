@@ -1,5 +1,6 @@
 import { levelDefinitions, LevelDefinition } from "./levels.handler";
 import { CreepRole, CreepRoleEnum, getCreepsByRole } from "./types";
+import { debugLog } from "./utils/Logger";
 
 /**
  * Interface defining the structure for creep counts by role
@@ -122,14 +123,14 @@ export class SpawnManager {
    */
   public logDebugInfo(context: SpawnContext): void {
     if (Game.time % SpawnManager.DEBUG_INTERVAL === 0) {
-      console.log(`Room Energy ${context.availableEnergy}/${context.energyCapacity}`);
-      console.log(`Enough creeps: ${context.enoughCreeps}`);
-      console.log(`Harvesters: ${context.creepCounts.harvesters}`);
-      console.log(`Haulers: ${context.creepCounts.haulers}`);
-      console.log(`Builders: ${context.creepCounts.builders}`);
-      console.log(`Upgraders: ${context.creepCounts.upgraders}`);
-      console.log(`Defenders: ${context.creepCounts.defenders}`);
-      console.log(`Rangers: ${context.creepCounts.rangers}`);
+      debugLog.debug(`Room Energy ${context.availableEnergy}/${context.energyCapacity}`);
+      debugLog.debug(`Enough creeps: ${context.enoughCreeps}`);
+      debugLog.debug(`Harvesters: ${context.creepCounts.harvesters}`);
+      debugLog.debug(`Haulers: ${context.creepCounts.haulers}`);
+      debugLog.debug(`Builders: ${context.creepCounts.builders}`);
+      debugLog.debug(`Upgraders: ${context.creepCounts.upgraders}`);
+      debugLog.debug(`Defenders: ${context.creepCounts.defenders}`);
+      debugLog.debug(`Rangers: ${context.creepCounts.rangers}`);
     }
   }
 
@@ -209,7 +210,7 @@ export class SpawnManager {
   private handleDefensiveSpawning(context: SpawnContext): void {
     const { spawn, levelHandler, creepCounts, energyCapacity } = context;
 
-    console.log("Enemies in the room - spawning defensive units");
+    debugLog.warn("Enemies in the room - spawning defensive units");
 
     if (energyCapacity <= 300) {
       this.spawnBasicDefenders(spawn, levelHandler, creepCounts);
@@ -410,7 +411,7 @@ export class SpawnManager {
    */
   private handleUltraHighEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, enoughCreeps: boolean): void {
     if (!enoughCreeps) {
-      console.log("> 550 not enough creeps");
+      debugLog.debug("> 550 not enough creeps");
       if (counts.upgraders < levelHandler.upgraders.min) {
         this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       } else if (counts.haulers < levelHandler.haulers.min) {

@@ -1,5 +1,6 @@
 // import * as _ from "lodash";
 import { findClosestContainer, getContainers } from "./utils";
+import { debugLog } from "./utils/Logger";
 
 type RoleBuilder = {
     run: (creep: Creep) => void,
@@ -32,7 +33,7 @@ const roleBuilder: RoleBuilder = {
             this.stateSetter(creep);
             this.stateHandler(creep);
         } catch (error) {
-            console.log(creep.name + " bldr error - ", error)
+            debugLog.error(creep.name + " bldr error - ", error)
         }
     },
     stateSetter: function (creep) {
@@ -136,7 +137,7 @@ const roleBuilder: RoleBuilder = {
                 creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
                 creep.memory.buildTarget = undefined;
             } else if (buildActionError !== OK) {
-                console.log(creep.name + " Bld Error ", buildActionError);
+                debugLog.warn(creep.name + " Bld Error ", buildActionError);
             }
         } else {
             creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
@@ -237,7 +238,7 @@ const roleBuilder: RoleBuilder = {
         try {
             return this.getNextClosestTarget(creep, sources)
         } catch (error) {
-            console.log("error with " + creep.name, error)
+            debugLog.error("error with " + creep.name, error)
             return undefined;
         }
     },

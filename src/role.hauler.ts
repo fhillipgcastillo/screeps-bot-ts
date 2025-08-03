@@ -1,4 +1,5 @@
 // import * as _ from "lodash";
+import { debugLog } from "./utils/Logger";
 
 type RoleHauler = {
   spawn?: StructureSpawn,
@@ -30,19 +31,19 @@ function withdrowRemains(creep: Creep, target: any) {
     // creep.say("Moving...");
     let movingError = creep.moveTo(target, { visualizePathStyle: { stroke: '#ff6600' } });
     if (movingError !== OK) {
-      console.log("mv act err", movingError)
+      debugLog.warn("mv act err", movingError)
       cleanUpTargetsState(creep);
     } else {
       creep.say("moving...")
     }
   } else if (withdrowAction === ERR_INVALID_TARGET) {
-    console.log(creep.name + " Inv tgt", target);
+    debugLog.debug(creep.name + " Inv tgt", target);
     withdrowAction = creep.pickup(target);
   } else if (withdrowAction === ERR_NOT_ENOUGH_RESOURCES) {
     creep.say("Not enough energy");
     cleanUpTargetsState(creep);
   } else if (withdrowAction !== OK) {
-    console.log(creep.name + "  Rsc error", withdrowAction);
+    debugLog.warn(creep.name + "  Rsc error", withdrowAction);
     cleanUpTargetsState(creep);
   }
 };
@@ -88,7 +89,7 @@ const haulerHandler: RoleHauler = {
     } else if (droppedResources.length > 0 && creep.memory.resourceTarget) {
       resourceTarget = _.find(droppedResources, r => r.id === creep.memory.resourceTarget)
     } else if (droppedResources.length > 0) {
-      console.log("no source target");
+      debugLog.debug("no source target");
       resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
       // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
       // resourceTarget = this.getClosestTarget(creep, availableTargets)
@@ -108,8 +109,8 @@ const haulerHandler: RoleHauler = {
         // creep.say("Moving...");
         let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
         if (movingError !== OK) {
-          // console.log(creep.name, "issue moving");
-          console.log("move action", movingError)
+          // debugLog.debug(creep.name, "issue moving");
+          debugLog.warn("move action", movingError)
           this.cleanUpTargetsState(creep);
         }
         // } else if (harvestAction === ERR_INVALID_TARGET) {
@@ -118,8 +119,8 @@ const haulerHandler: RoleHauler = {
         //   console.log("not enought energy, change source");
         //   this.cleanUpTargetsState(creep);
       } else if (harvestAction !== OK) {
-        console.log(creep.name + "  Rsc Another error", harvestAction);
-        console.log("target", creep.memory.resourceTarget);
+        debugLog.warn(creep.name + "  Rsc Another error", harvestAction);
+        debugLog.debug("target", creep.memory.resourceTarget);
         this.cleanUpTargetsState(creep);
       }
     } else {
@@ -170,7 +171,7 @@ const haulerHandler: RoleHauler = {
     try {
       return this.getNextClosestTarget(creep, sources)
     } catch (error) {
-      console.log("error with " + creep.name, error);
+      debugLog.error("error with " + creep.name, error);
       return undefined;
     }
   },

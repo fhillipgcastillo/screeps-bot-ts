@@ -9,11 +9,13 @@ import roleDefender from "role.defender";
 import roleRanger from "role.ranger";
 import { CreepRoleEnum, isValidCreepRole } from "./types";
 import { updateVisualOverlay } from "./ui";
+import { logger, debugLog } from "./utils/Logger";
 
 
 export class GameManager {
   private gameState: string;
   private isPaused: boolean = false;
+  private debug: boolean = false;
   private activeCreeps: Creep[] = [];
   private activeSpawns: StructureSpawn[] = [];
   public spawnManager: SpawnManager;
@@ -23,6 +25,9 @@ export class GameManager {
     this.gameState = "initialized";
     this.spawnManager = new SpawnManager();
     this.manualSpawner = getManualSpawner(this.spawnManager);
+
+    // Initialize logger with debug state
+    logger.setDebug(this.debug);
   }
 
   /**
@@ -34,7 +39,7 @@ export class GameManager {
       return;
     }
 
-    // console.log(`Current game tick is ${Game.time}`);
+    logger.debug(`Current game tick is ${Game.time}`);
     this.syncActiveCreeps();
 
     this.cleanUpMemory();
@@ -89,7 +94,7 @@ export class GameManager {
   runCreep(creep: Creep, spawn: StructureSpawn): void {
     // Validate that the creep has a valid role
     if (!isValidCreepRole(creep.memory.role)) {
-      console.log(`Invalid role: ${creep.memory.role} for creep ${creep.name}`);
+      logger.error(`Invalid role: ${creep.memory.role} for creep ${creep.name}`);
       return;
     }
 
@@ -117,14 +122,14 @@ export class GameManager {
         break;
       default:
         // This should never happen due to the type guard above, but keeping for safety
-        console.log(`Unknown role: ${creep.memory.role}`);
+        logger.error(`Unknown role: ${creep.memory.role}`);
     }
   }
   cleanUpMemory() {
     for (var creepName in Memory.creeps) {
       if (!Game.creeps[creepName]) {
         delete Memory.creeps[creepName];
-        console.log('Clearing non-existing creep memory:', creepName);
+        logger.debug('Clearing non-existing creep memory:', creepName);
       }
     }
   }
@@ -149,7 +154,7 @@ export class GameManager {
    */
   public pauseGame(): void {
     this.isPaused = true;
-    console.log("🛑 Game paused - bot operations stopped");
+    logger.force("🛑 Game paused - bot operations stopped");
   }
 
   /**
@@ -157,7 +162,7 @@ export class GameManager {
    */
   public resumeGame(): void {
     this.isPaused = false;
-    console.log("▶️ Game resumed - bot operations continuing");
+    logger.force("▶️ Game resumed - bot operations continuing");
   }
 
   /**
@@ -166,9 +171,9 @@ export class GameManager {
   public togglePause(): void {
     this.isPaused = !this.isPaused;
     if (this.isPaused) {
-      console.log("🛑 Game paused - bot operations stopped");
+      logger.force("🛑 Game paused - bot operations stopped");
     } else {
-      console.log("▶️ Game resumed - bot operations continuing");
+      logger.force("▶️ Game resumed - bot operations continuing");
     }
   }
 
@@ -177,6 +182,55 @@ export class GameManager {
    */
   public isGamePaused(): boolean {
     return this.isPaused;
+  }
+
+  // ============================================================================
+  // DEBUG LOGGING FUNCTIONALITY
+  // ============================================================================
+
+  /**
+   * Enable debug logging - shows debug messages in terminal
+   */
+  public enableDebug(): void {
+    this.debug = true;
+    logger.setDebug(true);
+    console.log("🐛 Debug logging enabled - terminal output active");
+  }
+
+  /**
+   * Disable debug logging - hides debug messages from terminal
+   */
+  public disableDebug(): void {
+    this.debug = false;
+    logger.setDebug(false);
+    console.log("🔇 Debug logging disabled - terminal output muted");
+  }
+
+  /**
+   * Toggle debug logging state
+   */
+  public toggleDebug(): void {
+    this.debug = !this.debug;
+    logger.setDebug(this.debug);
+    if (this.debug) {
+      console.log("🐛 Debug logging enabled - terminal output active");
+    } else {
+      console.log("🔇 Debug logging disabled - terminal output muted");
+    }
+  }
+
+  /**
+   * Check if debug logging is currently enabled
+   */
+  public isDebugEnabled(): boolean {
+    return this.debug;
+  }
+
+  /**
+   * Get the logger instance for direct access
+   */
+  public getLogger() {
+    return logger;
   }
 }
 
