@@ -1,4 +1,4 @@
-import spawnManager from "./spawn.manager";
+import SpawnManager from "./spawn.manager";
 import roleHarvester from "./role.harvester_stationary";
 import roleHauler from "./role.hauler";
 import roleUpgrader from "./role.upgrader";
@@ -12,9 +12,11 @@ export class GameManager {
   private gameState: string;
   private activeCreeps: Creep[] = [];
   private activeSpawns: StructureSpawn[] = [];
+  public spawnManager: SpawnManager;
 
   constructor() {
     this.gameState = "initialized";
+    this.spawnManager = new SpawnManager();
   }
 
   /**
@@ -28,7 +30,8 @@ export class GameManager {
     // Game.map.visual.text("Target💥", new RoomPosition(10,16,Object.keys(Game.rooms)[0]), {color: '#FF0000', fontSize: 19});
 
     // auto spawn harvesters
-    spawnManager.run();
+    // spawnManager.run();
+
     for (let name in Object.values(Game.spawns)) {
       const spawn = Game.spawns[name];
 

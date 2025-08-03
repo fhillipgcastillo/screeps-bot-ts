@@ -1,301 +1,464 @@
-// import * as _ from "lodash";
-import { levelDefinitions } from "./levels.handler";
+import { levelDefinitions, LevelDefinition } from "./levels.handler";
 
-// const levelDefinitions = require("levels.handler");
-// Game
-// to do: need to extract te spawn of each role on their own methods/file.
-const spawnManager = {
-    run: function () {
-        const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
-        const haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
-        const builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder');
-        const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
-        const defenders = _.filter(Game.creeps, (creep) => creep.memory.role == 'defender');
-        const rangers = _.filter(Game.creeps, (creep) => creep.memory.role == 'ranger');
+/**
+ * Interface defining the structure for creep counts by role
+ */
+interface CreepCounts {
+  harvesters: number;
+  haulers: number;
+  builders: number;
+  upgraders: number;
+  defenders: number;
+  rangers: number;
+}
 
-        for (let name in Game.spawns) {
-            const spawn = Game.spawns[name];
-            if (spawn) {
-                const currentLevel = spawn.room?.controller ? spawn.room?.controller.level : 1;
-                const lvlString: string = currentLevel.toString();
-                const levelHandler: { [name: string]: any } = levelDefinitions.hasOwnProperty(currentLevel.toString()) ? levelDefinitions[lvlString] : {};
-                var enoughCreeps = harvesters.length >= levelHandler.harvesters.min
-                    && haulers.length >= levelHandler.haulers.min
-                    && upgraders.length >= levelHandler.upgraders.min
-                    && builders.length >= levelHandler.builders.min;
-                const avilableEnergy = spawn.room.energyAvailable;
-                const energyCapacity = spawn.room.energyCapacityAvailable;
+/**
+ * Interface defining spawn context information
+ */
+interface SpawnContext {
+  spawn: StructureSpawn;
+  currentLevel: number;
+  levelHandler: LevelDefinition;
+  creepCounts: CreepCounts;
+  availableEnergy: number;
+  energyCapacity: number;
+  enoughCreeps: boolean;
+  enemiesInRoom: Creep[];
+}
 
+/**
+ * SpawnManager class responsible for managing creep spawning across all spawns
+ * Implements object-oriented design principles with proper encapsulation and separation of concerns
+ */
+export class SpawnManager {
+  private static readonly DEBUG_INTERVAL = 5;
+  private static readonly MINIMUM_HARVESTERS_THRESHOLD = 3;
+  private static readonly MINIMUM_HAULERS_THRESHOLD = 4;
+  private static readonly MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED = 2;
 
-                if (Game.time % 5 == 0) {
-                    console.log("Room Energy " + spawn.room.energyAvailable + "/" + spawn.room.energyCapacityAvailable);
-                    console.log('Enough creeps: ' + enoughCreeps);
-                    console.log('Harvesters: ' + harvesters.length);
-                    console.log('Haulers: ' + haulers.length);
-                    console.log('builders: ' + builders.length);
-                    console.log('upgrader: ' + upgraders.length);
-                    console.log('defenders: ' + defenders.length);
-                    console.log('rangers: ' + rangers.length);
-                }
+  /**
+   * Main entry point for spawn management - processes all spawns in the game
+   */
+  public run(): void {
+    const globalCreepCounts = this.getGlobalCreepCounts();
 
-                // TODO
-                // Handle all the Spawners structures
-                // calculate if we are in danger and if we don't have enought unnit defender/rangers, then spwn them over others
-                // it need to be at least  3 harvester
-                // if we are not in danger, workers will be the priority
-
-                //auto spawn section
-                // Level 1 controller
-                if (currentLevel < 2 || harvesters.length < 3 || haulers.length < 4) {
-                    this.handleInitialRC(spawn)
-                } else if (currentLevel >= 2) {
-                    var enemiesInRoom = spawn.room.find(FIND_HOSTILE_CREEPS);
-                    if (enemiesInRoom.length <= 0) {
-                        this.handleCL2(spawn);
-                    } else if (enemiesInRoom.length > 0) {
-                        // const enoughDefenders = 0;
-                        console.log("enemies in the room");
-
-                        if (energyCapacity <= 300) {
-                            if (rangers.length < levelHandler.rangers.min) {
-                                spawn.spawnCreep([TOUGH, RANGED_ATTACK, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
-                            } else if (defenders.length < levelHandler.defenders.min) {
-                                spawn.spawnCreep([TOUGH, ATTACK, ATTACK, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
-                            }
-                        } else if (energyCapacity >= 350) {
-                            if (rangers.length < levelHandler.defenders.min) {
-                                spawn.spawnCreep([TOUGH, RANGED_ATTACK, RANGED_ATTACK, MOVE, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
-                            } else if (defenders.length < 2) {
-                                spawn.spawnCreep([TOUGH, ATTACK, ATTACK, MOVE, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
-                            }
-                        } else {
-                            if (rangers.length < levelHandler.rangers.max) {
-                                spawn.spawnCreep([TOUGH, RANGED_ATTACK, MOVE], 'Ranger' + Game.time, { memory: { role: 'ranger' } as CreepMemory });
-                            } else if (defenders.length < levelHandler.defenders.max) {
-                                spawn.spawnCreep([TOUGH, ATTACK, MOVE], 'Defender' + Game.time, { memory: { role: 'defender' } as CreepMemory });
-                            }
-                        }
-                    }
-                }
-
-                if (spawn.spawning) {
-                    var spawningCreep = Game.creeps[spawn.spawning.name];
-                    // console.log(Game.spawns['Spawn1'].spawning.name);
-                    spawn.room.visual.text('🛠️' + spawningCreep.memory.role, spawn.pos.x + 1, spawn.pos.y, { align: 'left', opacity: 0.8 })
-                }
-            }
-        }
-    },
-    handleInitialRC: function (spawn: StructureSpawn): void {
-        // TODO: only store the amount of each one
-        const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
-        const haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
-        const builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder');
-        const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
-        // const defenders = _.filter(Game.creeps, (creep) => creep.memory.role == 'defender');
-        // const rangers = _.filter(Game.creeps, (creep) => creep.memory.role == 'ranger');
-
-        const currentLevel = spawn.room?.controller ? spawn.room?.controller.level : 1;
-        const lvlString: string = currentLevel.toString();
-        const levelHandler: { [name: string]: any } = levelDefinitions.hasOwnProperty(currentLevel.toString()) ? levelDefinitions[lvlString] : {};
-
-        var enoughCreeps = harvesters.length >= levelHandler.harvesters.min
-            && haulers.length >= levelHandler.haulers.min
-            && upgraders.length >= levelHandler.upgraders.min
-            && builders.length >= levelHandler.builders.min;
-        const avilableEnergy = spawn.room.energyAvailable;
-        const energyCapacity = spawn.room.energyCapacityAvailable;
-
-        // when 0 harvester, create a quick cheap one so the first hauler spawn fast 200 body weight
-        // when the first hauler as well need to have a cheap one (200 body weight)
-        // when more that 1, then start consuming almomst all the energy, like 250 energy per spawn until level 2 or continue with cehap one until level 2?
-        // when enough basic creeps (haulers and harvesters), auto render 1 container 1 right x or 2 next to te spawn position
-        // after that start spawning the builders 2 or 3
-        // after container is built, spawn the upgraders or jsut change the role of builders to upgraders or waint until certain point and start building Roads
-
-        if ((avilableEnergy < 300
-            || (
-                harvesters.length <= levelHandler.harvesters.min
-                || haulers.length <= levelHandler.haulers.min
-                || builders.length <= levelHandler.builders.min
-                || upgraders.length <= levelHandler.upgraders.min
-            )
-        )) {
-            if (harvesters.length < 1 || harvesters.length < levelHandler.harvesters.min && haulers.length % 3 === 0) {
-                // spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-                spawn.spawnCreep([WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.min) {
-                // spawn.spawnCreep([CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-                spawn.spawnCreep([CARRY, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.min) {
-                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.min) {
-                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-            return;
-        } else if (enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.max) {
-                spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.max) {
-                spawn.spawnCreep([CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.max) {
-                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.max) {
-                spawn.spawnCreep([WORK, CARRY, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-            return;
-        }
-    },
-    handleCL2: function (spawn: StructureSpawn) {
-        const harvesters = _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester');
-        const haulers = _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler');
-        const builders = _.filter(Game.creeps, (creep) => creep.memory.role == 'builder');
-        const upgraders = _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader');
-
-        const currentLevel = spawn.room?.controller ? spawn.room?.controller.level : 1;
-        const lvlString: string = currentLevel.toString();
-        const levelHandler: { [name: string]: any } = levelDefinitions.hasOwnProperty(currentLevel.toString()) ? levelDefinitions[lvlString] : {};
-        var enoughCreeps = harvesters.length >= levelHandler.harvesters.min
-            && haulers.length >= levelHandler.haulers.min
-            && upgraders.length >= levelHandler.upgraders.min
-            && builders.length >= levelHandler.builders.min;
-        const avilableEnergy = spawn.room.energyAvailable;
-        const energyCapacity = spawn.room.energyCapacityAvailable;
-
-        if (energyCapacity <= 300 && !enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.min && haulers.length % 3 === 0) {
-                spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.min) {
-                spawn.spawnCreep([CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.min) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.min) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-            return;
-        } else if (energyCapacity <= 300 && enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.max && harvesters.length > 1 && haulers.length > 4) {
-                spawn.spawnCreep([WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.max) {
-                spawn.spawnCreep([CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.max) {
-                spawn.spawnCreep([WORK, CARRY, WORK, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.max) {
-                spawn.spawnCreep([WORK, CARRY, WORK, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-            return;
-        }
-        if (energyCapacity >= 350 && energyCapacity <= 400 && !enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.min && haulers.length > 3) {
-                spawn.spawnCreep([WORK, WORK, WORK, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.min) {
-                spawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.min) {
-                spawn.spawnCreep([WORK, CARRY, WORK, CARRY, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.min) {
-                spawn.spawnCreep([WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-        } else {
-            if (energyCapacity >= 351 && energyCapacity <= 400 && enoughCreeps) {
-                if (harvesters.length < levelHandler.harvesters.max && harvesters.length > 1 && haulers.length > 4) {
-                    spawn.spawnCreep([WORK, WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-                }
-                else if (haulers.length < levelHandler.haulers.max) {
-                    spawn.spawnCreep([CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-                } else if (builders.length < levelHandler.builders.max) {
-                    spawn.spawnCreep([WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-                } else if (upgraders.length < levelHandler.upgraders.max) {
-                    spawn.spawnCreep([WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-                }
-            }
-            return;
-        }
-        if (energyCapacity > 400 && energyCapacity < 450 && !enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.min && harvesters.length > 1 && haulers.length % 2) {
-                spawn.spawnCreep([WORK, WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.min) {
-                spawn.spawnCreep([WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.min) {
-                spawn.spawnCreep([WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-        } else {
-            if (energyCapacity >= 451 && energyCapacity <= 500 && enoughCreeps) {
-                if (harvesters.length < levelHandler.harvesters.max && harvesters.length > 1 && haulers.length % 4) {
-                    spawn.spawnCreep([WORK, WORK, WORK, WORK, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-                } else if (builders.length < levelHandler.builders.max) {
-                    spawn.spawnCreep([WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-                } else if (upgraders.length < levelHandler.upgraders.max) {
-                    spawn.spawnCreep([WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-                }
-            }
-            return;
-        }
-        if (energyCapacity >= 450 && energyCapacity < 500 && !enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-            return;
-        } else if (energyCapacity >= 450 && energyCapacity < 500 && enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-            return;
-        }
-        if (energyCapacity >= 500 && !enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.min && avilableEnergy >= 450) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.min && avilableEnergy >= 450) {
-                spawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.min && avilableEnergy >= 450) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.min && avilableEnergy >= 450) {
-                spawn.spawnCreep([WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-        } else if (energyCapacity >= 500 && enoughCreeps) {
-            if (harvesters.length < levelHandler.harvesters.max && avilableEnergy >= 450) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.max && avilableEnergy >= 450) {
-                spawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.max && avilableEnergy >= 450) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            } else if (upgraders.length < levelHandler.upgraders.max && avilableEnergy >= 450) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            }
-            return;
-        }
-        if (energyCapacity >= 550 && !enoughCreeps && avilableEnergy > 450) {
-            console.log("> 550 not enf")
-            if (upgraders.length < levelHandler.upgraders.min) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.min) {
-                spawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (harvesters.length < levelHandler.harvesters.min) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.min) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            }
-        } else if (energyCapacity >= 550 && enoughCreeps) {
-            if (upgraders.length < levelHandler.upgraders.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader' + Game.time, { memory: { role: 'upgrader' } as CreepMemory });
-            } else if (haulers.length < levelHandler.haulers.max) {
-                spawn.spawnCreep([CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler' + Game.time, { memory: { role: 'hauler' } as CreepMemory });
-            } else if (harvesters.length < levelHandler.harvesters.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester' + Game.time, { memory: { role: 'harvester' } as CreepMemory });
-            } else if (builders.length < levelHandler.builders.max) {
-                spawn.spawnCreep([WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder' + Game.time, { memory: { role: 'builder' } as CreepMemory });
-            }
-        } else {
-            console.log("No more energy")
-        }
+    for (const spawnName in Game.spawns) {
+      const spawn = Game.spawns[spawnName];
+      if (spawn) {
+        this.processSpawn(spawn, globalCreepCounts);
+      }
     }
-};
+  }
 
-export default spawnManager;
+  /**
+   * Processes a single spawn and determines what creeps to spawn
+   */
+  private processSpawn(spawn: StructureSpawn, globalCreepCounts: CreepCounts): void {
+    const context = this.createSpawnContext(spawn, globalCreepCounts);
+
+    this.logDebugInfo(context);
+    this.handleSpawning(context);
+    this.displaySpawningVisual(spawn);
+  }
+
+  /**
+   * Creates a comprehensive context object for spawn decision making
+   */
+  private createSpawnContext(spawn: StructureSpawn, creepCounts: CreepCounts): SpawnContext {
+    const currentLevel = spawn.room?.controller?.level ?? 1;
+    const levelHandler = this.getLevelHandler(currentLevel);
+    const availableEnergy = spawn.room.energyAvailable;
+    const energyCapacity = spawn.room.energyCapacityAvailable;
+    const enoughCreeps = this.hasEnoughCreeps(creepCounts, levelHandler);
+    const enemiesInRoom = spawn.room.find(FIND_HOSTILE_CREEPS);
+
+    return {
+      spawn,
+      currentLevel,
+      levelHandler,
+      creepCounts,
+      availableEnergy,
+      energyCapacity,
+      enoughCreeps,
+      enemiesInRoom
+    };
+  }
+
+  /**
+   * Gets the current count of all creep types globally
+   */
+  public getGlobalCreepCounts(): CreepCounts {
+    return {
+      harvesters: _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester').length,
+      haulers: _.filter(Game.creeps, (creep) => creep.memory.role === 'hauler').length,
+      builders: _.filter(Game.creeps, (creep) => creep.memory.role === 'builder').length,
+      upgraders: _.filter(Game.creeps, (creep) => creep.memory.role === 'upgrader').length,
+      defenders: _.filter(Game.creeps, (creep) => creep.memory.role === 'defender').length,
+      rangers: _.filter(Game.creeps, (creep) => creep.memory.role === 'ranger').length
+    };
+  }
+
+  /**
+   * Gets the level handler configuration for the given controller level
+   */
+  public getLevelHandler(level: number): LevelDefinition {
+    const levelString = level.toString();
+    return levelDefinitions.hasOwnProperty(levelString) ? levelDefinitions[levelString] : levelDefinitions["1"];
+  }
+
+  /**
+   * Determines if we have enough creeps based on minimum requirements
+   */
+  public hasEnoughCreeps(counts: CreepCounts, levelHandler: LevelDefinition): boolean {
+    return counts.harvesters >= levelHandler.harvesters.min
+      && counts.haulers >= levelHandler.haulers.min
+      && counts.upgraders >= levelHandler.upgraders.min
+      && counts.builders >= levelHandler.builders.min;
+  }
+
+  /**
+   * Logs debug information about the current spawn state
+   */
+  public logDebugInfo(context: SpawnContext): void {
+    if (Game.time % SpawnManager.DEBUG_INTERVAL === 0) {
+      console.log(`Room Energy ${context.availableEnergy}/${context.energyCapacity}`);
+      console.log(`Enough creeps: ${context.enoughCreeps}`);
+      console.log(`Harvesters: ${context.creepCounts.harvesters}`);
+      console.log(`Haulers: ${context.creepCounts.haulers}`);
+      console.log(`Builders: ${context.creepCounts.builders}`);
+      console.log(`Upgraders: ${context.creepCounts.upgraders}`);
+      console.log(`Defenders: ${context.creepCounts.defenders}`);
+      console.log(`Rangers: ${context.creepCounts.rangers}`);
+    }
+  }
+
+  /**
+   * Main spawning logic dispatcher
+   */
+  private handleSpawning(context: SpawnContext): void {
+    // Handle initial room controller level or emergency situations
+    if (this.shouldHandleInitialSpawning(context)) {
+      this.handleInitialSpawning(context);
+    }
+    // Handle advanced spawning for level 2+ rooms
+    else if (context.currentLevel >= SpawnManager.MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED) {
+      if (context.enemiesInRoom.length > 0) {
+        this.handleDefensiveSpawning(context);
+      } else {
+        this.handleAdvancedSpawning(context);
+      }
+    }
+  }
+
+  /**
+   * Determines if we should use initial spawning logic
+   */
+  private shouldHandleInitialSpawning(context: SpawnContext): boolean {
+    return context.currentLevel < SpawnManager.MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED
+      || context.creepCounts.harvesters < SpawnManager.MINIMUM_HARVESTERS_THRESHOLD
+      || context.creepCounts.haulers < SpawnManager.MINIMUM_HAULERS_THRESHOLD;
+  }
+  /**
+   * Handles initial spawning for early game or emergency situations
+   */
+  private handleInitialSpawning(context: SpawnContext): void {
+    const { spawn, levelHandler, creepCounts, availableEnergy, enoughCreeps } = context;
+
+    // Handle emergency or low energy situations
+    if (availableEnergy < 300 || !enoughCreeps) {
+      this.spawnEmergencyCreeps(spawn, levelHandler, creepCounts);
+    } else if (enoughCreeps) {
+      this.spawnOptimalCreeps(spawn, levelHandler, creepCounts);
+    }
+  }
+
+  /**
+   * Spawns emergency creeps with minimal energy requirements
+   */
+  public spawnEmergencyCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
+    if (counts.harvesters < 1 || (counts.harvesters < levelHandler.harvesters.min && counts.haulers % 3 === 0)) {
+      this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', 'harvester');
+    } else if (counts.haulers < levelHandler.haulers.min) {
+      this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', 'hauler');
+    } else if (counts.builders < levelHandler.builders.min) {
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', 'builder');
+    } else if (counts.upgraders < levelHandler.upgraders.min) {
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', 'upgrader');
+    }
+  }
+
+  /**
+   * Spawns optimal creeps when we have enough basic creeps
+   */
+  private spawnOptimalCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
+    if (counts.harvesters < levelHandler.harvesters.max) {
+      this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+    } else if (counts.haulers < levelHandler.haulers.max) {
+      this.spawnCreep(spawn, [CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+    } else if (counts.builders < levelHandler.builders.max) {
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', 'builder');
+    } else if (counts.upgraders < levelHandler.upgraders.max) {
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', 'upgrader');
+    }
+  }
+
+  /**
+   * Handles defensive spawning when enemies are present
+   */
+  private handleDefensiveSpawning(context: SpawnContext): void {
+    const { spawn, levelHandler, creepCounts, energyCapacity } = context;
+
+    console.log("Enemies in the room - spawning defensive units");
+
+    if (energyCapacity <= 300) {
+      this.spawnBasicDefenders(spawn, levelHandler, creepCounts);
+    } else if (energyCapacity >= 350) {
+      this.spawnAdvancedDefenders(spawn, levelHandler, creepCounts);
+    } else {
+      this.spawnFallbackDefenders(spawn, levelHandler, creepCounts);
+    }
+  }
+
+  /**
+   * Spawns basic defensive units for low energy capacity
+   */
+  private spawnBasicDefenders(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
+    if (counts.rangers < levelHandler.rangers.min) {
+      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, MOVE], 'Ranger', 'ranger');
+    } else if (counts.defenders < levelHandler.defenders.min) {
+      this.spawnCreep(spawn, [TOUGH, ATTACK, ATTACK, MOVE], 'Defender', 'defender');
+    }
+  }
+
+  /**
+   * Spawns advanced defensive units for higher energy capacity
+   */
+  private spawnAdvancedDefenders(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
+    if (counts.rangers < levelHandler.rangers.min) {
+      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, RANGED_ATTACK, MOVE, MOVE], 'Ranger', 'ranger');
+    } else if (counts.defenders < 2) {
+      this.spawnCreep(spawn, [TOUGH, ATTACK, ATTACK, MOVE, MOVE], 'Defender', 'defender');
+    }
+  }
+
+  /**
+   * Spawns fallback defensive units
+   */
+  private spawnFallbackDefenders(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
+    if (counts.rangers < levelHandler.rangers.max) {
+      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, MOVE], 'Ranger', 'ranger');
+    } else if (counts.defenders < levelHandler.defenders.max) {
+      this.spawnCreep(spawn, [TOUGH, ATTACK, MOVE], 'Defender', 'defender');
+    }
+  }
+  /**
+   * Handles advanced spawning for level 2+ rooms with complex energy-based logic
+   */
+  private handleAdvancedSpawning(context: SpawnContext): void {
+    const { spawn, levelHandler, creepCounts, availableEnergy, energyCapacity, enoughCreeps } = context;
+
+    // Handle different energy capacity ranges
+    if (energyCapacity <= 300) {
+      this.handleLowEnergySpawning(spawn, levelHandler, creepCounts, enoughCreeps);
+    } else if (energyCapacity >= 350 && energyCapacity <= 400) {
+      this.handleMidEnergySpawning(spawn, levelHandler, creepCounts, availableEnergy, enoughCreeps);
+    } else if (energyCapacity > 400 && energyCapacity < 500) {
+      this.handleHighEnergySpawning(spawn, levelHandler, creepCounts, availableEnergy, enoughCreeps);
+    } else if (energyCapacity >= 500) {
+      this.handleVeryHighEnergySpawning(spawn, levelHandler, creepCounts, availableEnergy, enoughCreeps);
+    }
+  }
+
+  /**
+   * Handles spawning for low energy capacity (≤300)
+   */
+  private handleLowEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, enoughCreeps: boolean): void {
+    if (!enoughCreeps) {
+      if (counts.harvesters < levelHandler.harvesters.min && counts.haulers % 3 === 0) {
+        this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.haulers < levelHandler.haulers.min) {
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      } else if (counts.builders < levelHandler.builders.min) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE], 'Builder', 'builder');
+      } else if (counts.upgraders < levelHandler.upgraders.min) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE], 'Upgrader', 'upgrader');
+      }
+    } else {
+      if (counts.harvesters < levelHandler.harvesters.max && counts.harvesters > 1 && counts.haulers > 4) {
+        this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.haulers < levelHandler.haulers.max) {
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      } else if (counts.builders < levelHandler.builders.max) {
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, MOVE, MOVE], 'Builder', 'builder');
+      } else if (counts.upgraders < levelHandler.upgraders.max) {
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, MOVE, MOVE], 'Upgrader', 'upgrader');
+      }
+    }
+  }
+
+  /**
+   * Handles spawning for mid energy capacity (350-400)
+   */
+  private handleMidEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, availableEnergy: number, enoughCreeps: boolean): void {
+    if (!enoughCreeps) {
+      if (counts.harvesters < levelHandler.harvesters.min && counts.haulers > 3) {
+        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE], 'Harvester', 'harvester');
+      } else if (counts.haulers < levelHandler.haulers.min) {
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      } else if (counts.builders < levelHandler.builders.min) {
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, CARRY, MOVE, MOVE], 'Builder', 'builder');
+      } else if (counts.upgraders < levelHandler.upgraders.min) {
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader', 'upgrader');
+      }
+    } else {
+      if (counts.harvesters < levelHandler.harvesters.max && counts.harvesters > 1 && counts.haulers > 4) {
+        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.haulers < levelHandler.haulers.max) {
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      } else if (counts.builders < levelHandler.builders.max) {
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder', 'builder');
+      } else if (counts.upgraders < levelHandler.upgraders.max) {
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader', 'upgrader');
+      }
+    }
+  }
+  /**
+   * Handles spawning for high energy capacity (400-500)
+   */
+  private handleHighEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, availableEnergy: number, enoughCreeps: boolean): void {
+    if (!enoughCreeps) {
+      if (counts.harvesters < levelHandler.harvesters.min && counts.harvesters > 1 && counts.haulers % 2) {
+        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.builders < levelHandler.builders.min) {
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder', 'builder');
+      } else if (counts.upgraders < levelHandler.upgraders.min) {
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader', 'upgrader');
+      }
+    } else {
+      if (counts.harvesters < levelHandler.harvesters.max && counts.harvesters > 1 && counts.haulers % 4) {
+        this.spawnCreep(spawn, [WORK, WORK, WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.builders < levelHandler.builders.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Builder', 'builder');
+      } else if (counts.upgraders < levelHandler.upgraders.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader', 'upgrader');
+      }
+    }
+
+    // Additional logic for 450-500 range
+    if (availableEnergy >= 450) {
+      if (counts.harvesters < levelHandler.harvesters.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.builders < levelHandler.builders.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+      } else if (counts.upgraders < levelHandler.upgraders.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+      }
+    }
+  }
+
+  /**
+   * Handles spawning for very high energy capacity (≥500)
+   */
+  private handleVeryHighEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, availableEnergy: number, enoughCreeps: boolean): void {
+    if (availableEnergy >= 450) {
+      if (!enoughCreeps) {
+        this.spawnVeryHighEnergyMinimumCreeps(spawn, levelHandler, counts);
+      } else {
+        this.spawnVeryHighEnergyOptimalCreeps(spawn, levelHandler, counts);
+      }
+    }
+
+    // Handle 550+ energy capacity
+    if (spawn.room.energyCapacityAvailable >= 550 && availableEnergy > 450) {
+      this.handleUltraHighEnergySpawning(spawn, levelHandler, counts, enoughCreeps);
+    }
+  }
+
+  /**
+   * Spawns minimum required creeps for very high energy capacity
+   */
+  private spawnVeryHighEnergyMinimumCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
+    if (counts.harvesters < levelHandler.harvesters.min) {
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+    } else if (counts.haulers < levelHandler.haulers.min) {
+      this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+    } else if (counts.builders < levelHandler.builders.min) {
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+    } else if (counts.upgraders < levelHandler.upgraders.min) {
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+    }
+  }
+
+  /**
+   * Spawns optimal creeps for very high energy capacity
+   */
+  private spawnVeryHighEnergyOptimalCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
+    if (counts.harvesters < levelHandler.harvesters.max) {
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+    } else if (counts.haulers < levelHandler.haulers.max) {
+      this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+    } else if (counts.builders < levelHandler.builders.max) {
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+    } else if (counts.upgraders < levelHandler.upgraders.max) {
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+    }
+  }
+
+  /**
+   * Handles ultra high energy capacity spawning (550+)
+   */
+  private handleUltraHighEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, enoughCreeps: boolean): void {
+    if (!enoughCreeps) {
+      console.log("> 550 not enough creeps");
+      if (counts.upgraders < levelHandler.upgraders.min) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+      } else if (counts.haulers < levelHandler.haulers.min) {
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      } else if (counts.harvesters < levelHandler.harvesters.min) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.builders < levelHandler.builders.min) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Builder', 'builder');
+      }
+    } else {
+      if (counts.upgraders < levelHandler.upgraders.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+      } else if (counts.haulers < levelHandler.haulers.max) {
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      } else if (counts.harvesters < levelHandler.harvesters.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+      } else if (counts.builders < levelHandler.builders.max) {
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+      }
+    }
+  }
+
+  /**
+   * Utility method to spawn a creep with proper naming and memory setup
+   */
+  public spawnCreep(spawn: StructureSpawn, body: BodyPartConstant[], namePrefix: string, role: string): ScreepsReturnCode {
+    const name = `${namePrefix}${Game.time}`;
+    const memory: CreepMemory = { role } as CreepMemory;
+    return spawn.spawnCreep(body, name, { memory });
+  }
+
+  /**
+   * Displays visual indicator for spawning creeps
+   */
+  public displaySpawningVisual(spawn: StructureSpawn): void {
+    if (spawn.spawning) {
+      const spawningCreep = Game.creeps[spawn.spawning.name];
+      if (spawningCreep) {
+        spawn.room.visual.text(
+          '🛠️' + spawningCreep.memory.role,
+          spawn.pos.x + 1,
+          spawn.pos.y,
+          { align: 'left', opacity: 0.8 }
+        );
+      }
+    }
+  }
+}
+
+
+// Export the singleton instance as default
+export default SpawnManager;
