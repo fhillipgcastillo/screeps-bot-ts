@@ -8,6 +8,7 @@ import roleExplorer from "role.explorer";
 import roleDefender from "role.defender";
 import roleRanger from "role.ranger";
 import { CreepRoleEnum, isValidCreepRole } from "./types";
+import { updateVisualOverlay } from "./ui";
 
 
 export class GameManager {
@@ -52,6 +53,9 @@ export class GameManager {
         this.runCreep(creep, spawn);
       }
     }
+
+    // Update visual overlay if enabled
+    updateVisualOverlay();
   }
   handleSafeMode(spawn: StructureSpawn) {
     if (spawn.room?.controller) {

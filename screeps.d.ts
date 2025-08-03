@@ -1,5 +1,7 @@
 import { GameManager } from "GameManager";
 import { CreepRole, BaseCreepMemory } from "./src/types";
+import { SpawnResult, SpawnStatus, ManualSpawner } from "./src/manual.spawner";
+import { UIDisplayOptions, GameStatistics, GameStatsUI } from "./src/ui";
 
 declare global {
    /*
@@ -58,6 +60,42 @@ declare global {
     interface Global {
       log: any;
       gm: GameManager;
+
+      // Manual Spawner Functions - accessible from game console
+      spawnCreep: (creepType: CreepRole, spawnName?: string, customBody?: BodyPartConstant[], customName?: string) => SpawnResult;
+      spawnHarvester: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
+      spawnHauler: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
+      spawnBuilder: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
+      spawnUpgrader: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
+      spawnDefender: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
+      spawnRanger: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
+      spawnExplorer: (spawnName?: string, customBody?: BodyPartConstant[], nextRole?: CreepRole) => SpawnResult;
+
+      // Spawn Status and Information Functions
+      getSpawnStatus: (spawnName: string) => SpawnStatus | null;
+      getAllSpawnStatuses: () => Record<string, SpawnStatus>;
+      getCurrentCreepCounts: () => Record<CreepRole, number>;
+      needsMoreCreeps: (role: CreepRole, roomName?: string) => boolean;
+      getBodyPreview: (role: CreepRole, availableEnergy?: number, energyCapacity?: number) => {
+        body: BodyPartConstant[];
+        cost: number;
+        tier: string;
+      };
+
+      // Manual Spawner Instance Access
+      getManualSpawner: (spawnManager?: any) => ManualSpawner;
+
+      // UI Functions - accessible from game console
+      showCreeps: (options?: UIDisplayOptions) => void;
+      showRooms: (options?: UIDisplayOptions) => void;
+      showStats: (options?: UIDisplayOptions) => void;
+      showVisual: (roomName?: string, x?: number, y?: number) => void;
+      getStats: () => GameStatistics;
+      creeps: () => void;
+      rooms: () => void;
+      toggleVisual: () => void;
+      helpUI: () => void;
+      getGameStatsUI: () => GameStatsUI;
     }
   }
 }
