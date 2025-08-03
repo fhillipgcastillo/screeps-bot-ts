@@ -12,6 +12,7 @@ import { CreepRoleEnum, isValidCreepRole } from "./types";
 
 export class GameManager {
   private gameState: string;
+  private isPaused: boolean = false;
   private activeCreeps: Creep[] = [];
   private activeSpawns: StructureSpawn[] = [];
   public spawnManager: SpawnManager;
@@ -27,6 +28,11 @@ export class GameManager {
    * Main game loop method that is called every tick.
    */
   public tick(): void {
+    // Check if game is paused - return early if so
+    if (this.isPaused) {
+      return;
+    }
+
     // console.log(`Current game tick is ${Game.time}`);
     this.syncActiveCreeps();
 
@@ -128,6 +134,45 @@ export class GameManager {
 
   syncActiveCreeps(): void {
     this.activeCreeps = _.filter(Game.creeps, ((creep: Creep) => !creep.spawning));
+  }
+
+  // ============================================================================
+  // PAUSE/RESUME FUNCTIONALITY
+  // ============================================================================
+
+  /**
+   * Pause the game loop - stops all tick execution
+   */
+  public pauseGame(): void {
+    this.isPaused = true;
+    console.log("🛑 Game paused - bot operations stopped");
+  }
+
+  /**
+   * Resume the game loop - allows tick execution to continue
+   */
+  public resumeGame(): void {
+    this.isPaused = false;
+    console.log("▶️ Game resumed - bot operations continuing");
+  }
+
+  /**
+   * Toggle the pause state of the game
+   */
+  public togglePause(): void {
+    this.isPaused = !this.isPaused;
+    if (this.isPaused) {
+      console.log("🛑 Game paused - bot operations stopped");
+    } else {
+      console.log("▶️ Game resumed - bot operations continuing");
+    }
+  }
+
+  /**
+   * Check if the game is currently paused
+   */
+  public isGamePaused(): boolean {
+    return this.isPaused;
   }
 }
 

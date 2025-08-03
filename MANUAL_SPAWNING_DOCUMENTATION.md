@@ -49,11 +49,11 @@ main.getBodyPreview('harvester');
 In your TypeScript code:
 
 ```typescript
-import { 
-  spawnHarvester, 
-  spawnBuilder, 
+import {
+  spawnHarvester,
+  spawnBuilder,
   getSpawnStatus,
-  ManualSpawner 
+  ManualSpawner
 } from './manual.spawner';
 
 // Use convenience functions
@@ -102,7 +102,7 @@ if (result.success) {
 All convenience functions accept optional `spawnName` and `customBody` parameters:
 
 - `spawnHarvester(spawnName?, customBody?)` - Spawn a harvester
-- `spawnHauler(spawnName?, customBody?)` - Spawn a hauler  
+- `spawnHauler(spawnName?, customBody?)` - Spawn a hauler
 - `spawnBuilder(spawnName?, customBody?)` - Spawn a builder
 - `spawnUpgrader(spawnName?, customBody?)` - Spawn an upgrader
 - `spawnDefender(spawnName?, customBody?)` - Spawn a defender
@@ -269,3 +269,46 @@ if (needsMoreCreeps('builder')) {
   }
 }
 ```
+
+## Game Pause/Resume Functionality
+
+The GameManager now includes pause/resume functionality for debugging and temporary control:
+
+### Console Usage
+```javascript
+const main = require('main');
+
+// Pause the entire game loop
+main.pauseGame();
+
+// Resume the game loop
+main.resumeGame();
+
+// Toggle pause state
+main.togglePause();
+
+// Check if game is paused
+main.isGamePaused(); // returns true/false
+```
+
+### Direct GameManager Usage
+```typescript
+const gm = global.gm; // Your GameManager instance
+
+gm.pauseGame();     // Pause all bot operations
+gm.resumeGame();    // Resume all bot operations
+gm.togglePause();   // Toggle pause state
+gm.isGamePaused();  // Check current state
+```
+
+When paused, the bot will stop all operations including:
+- Creep AI execution
+- Automatic spawning
+- Memory cleanup
+- All game logic
+
+This is useful for:
+- Debugging specific game states
+- Temporarily stopping bot operations
+- Testing manual spawning without interference
+- Analyzing room conditions without changes
