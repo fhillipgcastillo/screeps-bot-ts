@@ -121,7 +121,7 @@ const roleBuilder: RoleBuilder = {
     },
     build(creep) {
         var target = null;
-        if (!creep.memory.buildTarget && !Object.keys(Game.constructionSites).includes(creep.memory.buildTarget)) {
+        if (!creep.memory.buildTarget || !Object.keys(Game.constructionSites).includes(creep.memory.buildTarget)) {
             target = this.getBuildTarget(creep);
         } else {
             target = this.findTarget(creep);
@@ -223,13 +223,13 @@ const roleBuilder: RoleBuilder = {
         if (!creep?.memory?.prevTargets) {
             this.memorizedPrevTargets(creep);
         }
-        if (creep.memory.prevTargets.length === targets.length) {
-            creep.memory.prevTargets = [];
+        if (creep.memory.prevBuildTargets.length === targets.length) {
+            creep.memory.prevBuildTargets = [];
         }
     },
     getNextClosestTarget(creep, targets) {
         this.shouldResetPrevTargets(creep, targets);
-        var availableTargets = _.filter(targets, (source) => !creep.memory.prevTargets.includes(source.id));
+        var availableTargets = _.filter(targets, (source) => !creep.memory.prevBuildTargets.includes(source.id));
         var nextClosestTaret = this.getClosestTarget(creep, availableTargets)
         return nextClosestTaret
     },

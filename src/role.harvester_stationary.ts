@@ -131,7 +131,7 @@ const roleHarvester: RoleHarvester = {
         return nextClosestTaret;
     },
     shouldResetPrevTargets(creep, targets) {
-        if (creep.memory.prevTargets.length === targets.length) {
+        if (creep.memory?.prevTargets && creep.memory?.prevTargets.length === targets.length) {
             creep.memory.prevTargets = [];
         }
     },

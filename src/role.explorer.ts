@@ -99,7 +99,7 @@ function explorer(creep: Creep, spawn: StructureSpawn) {
     console.log("found source", foundSources)
     if (!creep.memory.sourceTarget) {
       let sourceTarget = creep.pos.findClosestByRange(foundSources);
-      if (sourceTarget) {
+      if (sourceTarget &&  creep.memory.nextRole) {
         creep.memory.role = creep.memory.nextRole;
         // creep.memory.nextRole = "harvester";
         // creep.memory.sourceTarget = sourceTarget?.id;

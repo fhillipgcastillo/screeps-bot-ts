@@ -1,4 +1,5 @@
 import { levelDefinitions, LevelDefinition } from "./levels.handler";
+import { CreepRole, CreepRoleEnum, getCreepsByRole } from "./types";
 
 /**
  * Interface defining the structure for creep counts by role
@@ -85,16 +86,16 @@ export class SpawnManager {
   }
 
   /**
-   * Gets the current count of all creep types globally
+   * Gets the current count of all creep types globally using type-safe role filtering
    */
   public getGlobalCreepCounts(): CreepCounts {
     return {
-      harvesters: _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester').length,
-      haulers: _.filter(Game.creeps, (creep) => creep.memory.role === 'hauler').length,
-      builders: _.filter(Game.creeps, (creep) => creep.memory.role === 'builder').length,
-      upgraders: _.filter(Game.creeps, (creep) => creep.memory.role === 'upgrader').length,
-      defenders: _.filter(Game.creeps, (creep) => creep.memory.role === 'defender').length,
-      rangers: _.filter(Game.creeps, (creep) => creep.memory.role === 'ranger').length
+      harvesters: getCreepsByRole(CreepRoleEnum.HARVESTER).length,
+      haulers: getCreepsByRole(CreepRoleEnum.HAULER).length,
+      builders: getCreepsByRole(CreepRoleEnum.BUILDER).length,
+      upgraders: getCreepsByRole(CreepRoleEnum.UPGRADER).length,
+      defenders: getCreepsByRole(CreepRoleEnum.DEFENDER).length,
+      rangers: getCreepsByRole(CreepRoleEnum.RANGER).length
     };
   }
 
@@ -177,13 +178,13 @@ export class SpawnManager {
    */
   public spawnEmergencyCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
     if (counts.harvesters < 1 || (counts.harvesters < levelHandler.harvesters.min && counts.haulers % 3 === 0)) {
-      this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', 'harvester');
+      this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
     } else if (counts.haulers < levelHandler.haulers.min) {
-      this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', 'hauler');
+      this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
     } else if (counts.builders < levelHandler.builders.min) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', 'builder');
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
     } else if (counts.upgraders < levelHandler.upgraders.min) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', 'upgrader');
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
     }
   }
 
@@ -192,13 +193,13 @@ export class SpawnManager {
    */
   private spawnOptimalCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
     if (counts.harvesters < levelHandler.harvesters.max) {
-      this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+      this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
     } else if (counts.haulers < levelHandler.haulers.max) {
-      this.spawnCreep(spawn, [CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      this.spawnCreep(spawn, [CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
     } else if (counts.builders < levelHandler.builders.max) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', 'builder');
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
     } else if (counts.upgraders < levelHandler.upgraders.max) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', 'upgrader');
+      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
     }
   }
 
@@ -224,9 +225,9 @@ export class SpawnManager {
    */
   private spawnBasicDefenders(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
     if (counts.rangers < levelHandler.rangers.min) {
-      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, MOVE], 'Ranger', 'ranger');
+      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, MOVE], 'Ranger', CreepRoleEnum.RANGER);
     } else if (counts.defenders < levelHandler.defenders.min) {
-      this.spawnCreep(spawn, [TOUGH, ATTACK, ATTACK, MOVE], 'Defender', 'defender');
+      this.spawnCreep(spawn, [TOUGH, ATTACK, ATTACK, MOVE], 'Defender', CreepRoleEnum.DEFENDER);
     }
   }
 
@@ -235,9 +236,9 @@ export class SpawnManager {
    */
   private spawnAdvancedDefenders(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
     if (counts.rangers < levelHandler.rangers.min) {
-      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, RANGED_ATTACK, MOVE, MOVE], 'Ranger', 'ranger');
+      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, RANGED_ATTACK, MOVE, MOVE], 'Ranger', CreepRoleEnum.RANGER);
     } else if (counts.defenders < 2) {
-      this.spawnCreep(spawn, [TOUGH, ATTACK, ATTACK, MOVE, MOVE], 'Defender', 'defender');
+      this.spawnCreep(spawn, [TOUGH, ATTACK, ATTACK, MOVE, MOVE], 'Defender', CreepRoleEnum.DEFENDER);
     }
   }
 
@@ -246,9 +247,9 @@ export class SpawnManager {
    */
   private spawnFallbackDefenders(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
     if (counts.rangers < levelHandler.rangers.max) {
-      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, MOVE], 'Ranger', 'ranger');
+      this.spawnCreep(spawn, [TOUGH, RANGED_ATTACK, MOVE], 'Ranger', CreepRoleEnum.RANGER);
     } else if (counts.defenders < levelHandler.defenders.max) {
-      this.spawnCreep(spawn, [TOUGH, ATTACK, MOVE], 'Defender', 'defender');
+      this.spawnCreep(spawn, [TOUGH, ATTACK, MOVE], 'Defender', CreepRoleEnum.DEFENDER);
     }
   }
   /**
@@ -275,23 +276,23 @@ export class SpawnManager {
   private handleLowEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, enoughCreeps: boolean): void {
     if (!enoughCreeps) {
       if (counts.harvesters < levelHandler.harvesters.min && counts.haulers % 3 === 0) {
-        this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.haulers < levelHandler.haulers.min) {
-        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
       } else if (counts.builders < levelHandler.builders.min) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       } else if (counts.upgraders < levelHandler.upgraders.min) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       }
     } else {
       if (counts.harvesters < levelHandler.harvesters.max && counts.harvesters > 1 && counts.haulers > 4) {
-        this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.haulers < levelHandler.haulers.max) {
-        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
       } else if (counts.builders < levelHandler.builders.max) {
-        this.spawnCreep(spawn, [WORK, CARRY, WORK, MOVE, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       } else if (counts.upgraders < levelHandler.upgraders.max) {
-        this.spawnCreep(spawn, [WORK, CARRY, WORK, MOVE, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       }
     }
   }
@@ -302,23 +303,23 @@ export class SpawnManager {
   private handleMidEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, availableEnergy: number, enoughCreeps: boolean): void {
     if (!enoughCreeps) {
       if (counts.harvesters < levelHandler.harvesters.min && counts.haulers > 3) {
-        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.haulers < levelHandler.haulers.min) {
-        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
       } else if (counts.builders < levelHandler.builders.min) {
-        this.spawnCreep(spawn, [WORK, CARRY, WORK, CARRY, MOVE, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, CARRY, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       } else if (counts.upgraders < levelHandler.upgraders.min) {
-        this.spawnCreep(spawn, [WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       }
     } else {
       if (counts.harvesters < levelHandler.harvesters.max && counts.harvesters > 1 && counts.haulers > 4) {
-        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.haulers < levelHandler.haulers.max) {
-        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
       } else if (counts.builders < levelHandler.builders.max) {
-        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       } else if (counts.upgraders < levelHandler.upgraders.max) {
-        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       }
     }
   }
@@ -328,30 +329,30 @@ export class SpawnManager {
   private handleHighEnergySpawning(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts, availableEnergy: number, enoughCreeps: boolean): void {
     if (!enoughCreeps) {
       if (counts.harvesters < levelHandler.harvesters.min && counts.harvesters > 1 && counts.haulers % 2) {
-        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, WORK, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.builders < levelHandler.builders.min) {
-        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       } else if (counts.upgraders < levelHandler.upgraders.min) {
-        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, CARRY, CARRY, WORK, WORK, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       }
     } else {
       if (counts.harvesters < levelHandler.harvesters.max && counts.harvesters > 1 && counts.haulers % 4) {
-        this.spawnCreep(spawn, [WORK, WORK, WORK, WORK, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, WORK, WORK, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.builders < levelHandler.builders.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       } else if (counts.upgraders < levelHandler.upgraders.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, WORK, CARRY, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       }
     }
 
     // Additional logic for 450-500 range
     if (availableEnergy >= 450) {
       if (counts.harvesters < levelHandler.harvesters.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.builders < levelHandler.builders.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       } else if (counts.upgraders < levelHandler.upgraders.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       }
     }
   }
@@ -379,13 +380,13 @@ export class SpawnManager {
    */
   private spawnVeryHighEnergyMinimumCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
     if (counts.harvesters < levelHandler.harvesters.min) {
-      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
     } else if (counts.haulers < levelHandler.haulers.min) {
-      this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
     } else if (counts.builders < levelHandler.builders.min) {
-      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
     } else if (counts.upgraders < levelHandler.upgraders.min) {
-      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
     }
   }
 
@@ -394,13 +395,13 @@ export class SpawnManager {
    */
   private spawnVeryHighEnergyOptimalCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
     if (counts.harvesters < levelHandler.harvesters.max) {
-      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
     } else if (counts.haulers < levelHandler.haulers.max) {
-      this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+      this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
     } else if (counts.builders < levelHandler.builders.max) {
-      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
     } else if (counts.upgraders < levelHandler.upgraders.max) {
-      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+      this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
     }
   }
 
@@ -411,33 +412,38 @@ export class SpawnManager {
     if (!enoughCreeps) {
       console.log("> 550 not enough creeps");
       if (counts.upgraders < levelHandler.upgraders.min) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       } else if (counts.haulers < levelHandler.haulers.min) {
-        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
       } else if (counts.harvesters < levelHandler.harvesters.min) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.builders < levelHandler.builders.min) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       }
     } else {
       if (counts.upgraders < levelHandler.upgraders.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', 'upgrader');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
       } else if (counts.haulers < levelHandler.haulers.max) {
-        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', 'hauler');
+        this.spawnCreep(spawn, [CARRY, CARRY, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
       } else if (counts.harvesters < levelHandler.harvesters.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', 'harvester');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
       } else if (counts.builders < levelHandler.builders.max) {
-        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', 'builder');
+        this.spawnCreep(spawn, [WORK, WORK, CARRY, CARRY, MOVE, MOVE, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
       }
     }
   }
 
   /**
    * Utility method to spawn a creep with proper naming and memory setup
+   * Uses type-safe CreepRole for better type checking
    */
-  public spawnCreep(spawn: StructureSpawn, body: BodyPartConstant[], namePrefix: string, role: string): ScreepsReturnCode {
+  public spawnCreep(spawn: StructureSpawn, body: BodyPartConstant[], namePrefix: string, role: CreepRole): ScreepsReturnCode {
     const name = `${namePrefix}${Game.time}`;
-    const memory: CreepMemory = { role } as CreepMemory;
+    const memory: CreepMemory = {
+      role,
+      room: spawn.room.name,
+      working: false
+    } as CreepMemory;
     return spawn.spawnCreep(body, name, { memory });
   }
 

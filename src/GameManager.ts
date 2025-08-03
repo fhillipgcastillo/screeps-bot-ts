@@ -6,6 +6,7 @@ import roleBuilder from "./role.builder";
 import roleExplorer from "role.explorer";
 import roleDefender from "role.defender";
 import roleRanger from "role.ranger";
+import { CreepRoleEnum, isValidCreepRole } from "./types";
 
 
 export class GameManager {
@@ -30,7 +31,7 @@ export class GameManager {
     // Game.map.visual.text("Target💥", new RoomPosition(10,16,Object.keys(Game.rooms)[0]), {color: '#FF0000', fontSize: 19});
 
     // auto spawn harvesters
-    // spawnManager.run();
+    this.spawnManager.run();
 
     for (let name in Object.values(Game.spawns)) {
       const spawn = Game.spawns[name];
@@ -73,29 +74,36 @@ export class GameManager {
     }
   }
   runCreep(creep: Creep, spawn: StructureSpawn): void {
+    // Validate that the creep has a valid role
+    if (!isValidCreepRole(creep.memory.role)) {
+      console.log(`Invalid role: ${creep.memory.role} for creep ${creep.name}`);
+      return;
+    }
+
     switch (creep.memory.role) {
-      case 'harvester':
+      case CreepRoleEnum.HARVESTER:
         roleHarvester.run(creep);
         break;
-      case 'hauler':
+      case CreepRoleEnum.HAULER:
         roleHauler.run(creep);
         break;
-      case 'upgrader':
+      case CreepRoleEnum.UPGRADER:
         roleUpgrader.run(creep);
         break;
-      case 'builder':
+      case CreepRoleEnum.BUILDER:
         roleBuilder.run(creep);
         break;
-      case 'defender':
+      case CreepRoleEnum.DEFENDER:
         roleDefender.run(creep);
         break;
-      case 'ranger':
+      case CreepRoleEnum.RANGER:
         roleRanger.run(creep);
         break;
-      case 'explorer':
+      case CreepRoleEnum.EXPLORER:
         roleExplorer.run(creep, spawn);
         break;
       default:
+        // This should never happen due to the type guard above, but keeping for safety
         console.log(`Unknown role: ${creep.memory.role}`);
     }
   }
