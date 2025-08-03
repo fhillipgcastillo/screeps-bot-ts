@@ -1,14 +1,23 @@
-const IDLE_STATE = "IDLE";
-const HARVEST_STATE = "IDLE";
-const BUILD_STATE = "IDLE";
-const HAULER_STATE = "IDLE";
-const UPGRADE_STATE = "IDLE";
-const ATTACK_STATE = "ATTACKING";
-const HEAL_STATE = "HEADLING";
+export type eCreepState = "IDLE" | "HARVESTING" | "BUILDING" | "HAULING" | "UPGRADING" | "ATTACKING" | "HEALING";
+export enum CreepStateEnum {
+    IDLE = "IDLE",
+    HARVESTING = "HARVESTING",
+    BUILDING = "BUILDING",
+    HAULING = "HAULING",
+    UPGRADE = "UPGRADE",
+    ATTACKING = "ATTACKING",
+    HEALING = "HEALING",
+    UPGRADING = "UPGRADING",
+    TRANSFERRING = "TRANSFERRING",
+    REPAIRING = "REPAIRING",
+    COLLECTING = "COLLECTING",
+    DEFENDING = "DEFENDING",
+    EXPLORING = "EXPLORING",
+}
 
 // defined Creep State type
 
-abstract class CreepBrain {
+export abstract class CreepBrain {
     public creep: Creep;
     public memory: CreepMemory;
     public state: string = "IDLE";
@@ -35,9 +44,7 @@ export class SmartCreep extends CreepBrain {
     run(): void {
         this.handleTask()
     }
-    getCreep(): Creep {
-        return this.creep;
-    }
+
     public setRole(role: string) {
         this.memory.role = role;
     }
@@ -47,24 +54,25 @@ export class SmartCreep extends CreepBrain {
 
     handleTask() {
         switch (this.state) {
-            case HARVEST_STATE:
+            case CreepStateEnum.HARVESTING:
                 this.harvest && this.harvest();
                 break;
-            case HAULER_STATE:
+            case CreepStateEnum.HAULING:
                 this.hauler && this.hauler();
                 break;
-            case BUILD_STATE:
+            case CreepStateEnum.BUILDING:
                 this.build && this.build();
                 break;
-            case UPGRADE_STATE:
+            case CreepStateEnum.UPGRADING:
                 this.upgrade && this.upgrade();
                 break;
-            case ATTACK_STATE:
+            case CreepStateEnum.ATTACKING:
                 this.upgrade && this.upgrade();
                 break;
-            case HEAL_STATE:
+            case CreepStateEnum.HEALING:
                 this.upgrade && this.upgrade();
                 break;
+            case CreepStateEnum.IDLE:
             default:
                 this.idle && this.idle();
                 break;

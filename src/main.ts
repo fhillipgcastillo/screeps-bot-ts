@@ -52,7 +52,7 @@ import { GameManager } from "GameManager";
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
 // every 20 ticks, reset creeps action memory
 // export const loop = ErrorMapper.wrapLoop(() => {
-const gm =  GameManager.getInstance()
+const gm =  new GameManager()
 export const loop = () => {
   gm.tick();
 };

@@ -9,20 +9,14 @@ import roleRanger from "role.ranger";
 
 
 export class GameManager {
-  private static instance: GameManager;
   private gameState: string;
   private activeCreeps: Creep[] = [];
   private activeSpawns: StructureSpawn[] = [];
 
-  private constructor() {
+  constructor() {
     this.gameState = "initialized";
   }
-  public static getInstance(): GameManager {
-    if (!GameManager.instance) {
-      GameManager.instance = new GameManager();
-    }
-    return GameManager.instance;
-  }
+
   /**
    * Main game loop method that is called every tick.
    */
