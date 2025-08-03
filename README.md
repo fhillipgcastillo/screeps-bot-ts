@@ -54,6 +54,8 @@ The type definitions for Screeps come from [typed-screeps](https://github.com/sc
   * test deploy to private/local server works
   * Document hte right process
 * Add the hability to consider other, nearby, rooms with resources to harvest and pick up energy from
+* Run things by tasks, for the creeps, so we can have a better control of what they are doing and be able to se what they have pending, etc
+  * I want to be able to see for example the spanwn pending things, like which spawn will be next
 
 ## Documentation
 

@@ -36,7 +36,7 @@ export const levelDefinitions: LevelDefinitions = {
     },
     haulers: {
       min: 4,
-      max: 9,
+      max: 6,
     },
     builders: {
       min: 3,
@@ -78,7 +78,7 @@ export const levelDefinitions: LevelDefinitions = {
     },
     haulers: {
       min: 12,
-      max: 24,
+      max: 14,
     }
   },
   "3": {

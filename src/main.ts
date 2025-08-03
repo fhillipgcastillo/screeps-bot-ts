@@ -61,4 +61,24 @@ export const loop = () => {
 // for example: `require('main').spawnManager`
 // we could also change to use `Game.creepManager = require('CreepManager');`
 // export { spawnManager, roleHarvester, roleHauler, roleUpgrader, roleBuilder, roleExplorer, roleDefender, roleRanger };
+
+// Export manual spawning functions for console access
+export {
+  spawnCreep,
+  spawnHarvester,
+  spawnHauler,
+  spawnBuilder,
+  spawnUpgrader,
+  spawnDefender,
+  spawnRanger,
+  spawnExplorer,
+  getSpawnStatus,
+  getAllSpawnStatuses,
+  getCurrentCreepCounts,
+  needsMoreCreeps,
+  getBodyPreview,
+  ManualSpawner,
+  getManualSpawner
+} from "./manual.spawner";
+
 global.gm = gm;

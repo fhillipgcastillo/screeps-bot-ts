@@ -1,4 +1,5 @@
 import SpawnManager from "./spawn.manager";
+import { ManualSpawner, getManualSpawner } from "./manual.spawner";
 import roleHarvester from "./role.harvester_stationary";
 import roleHauler from "./role.hauler";
 import roleUpgrader from "./role.upgrader";
@@ -14,10 +15,12 @@ export class GameManager {
   private activeCreeps: Creep[] = [];
   private activeSpawns: StructureSpawn[] = [];
   public spawnManager: SpawnManager;
+  public manualSpawner: ManualSpawner;
 
   constructor() {
     this.gameState = "initialized";
     this.spawnManager = new SpawnManager();
+    this.manualSpawner = getManualSpawner(this.spawnManager);
   }
 
   /**
