@@ -10,7 +10,7 @@ import roleRanger from "role.ranger";
 import { CreepRoleEnum, isValidCreepRole } from "./types";
 import { updateVisualOverlay } from "./ui";
 import { logger, debugLog } from "./utils/Logger";
-import { MULTI_ROOM_CONFIG } from "./config/multi-room.config";
+import { MULTI_ROOM_CONFIG, validateMultiRoomConfig } from "./config/multi-room.config";
 import { cleanupRoomCaches, updateRoomSafetyCache } from "./utils/room-safety";
 import { clearResourceCache, updateResourceDiscoveryCache } from "./utils/multi-room-resources";
 import { logPerformanceStats, monitorMultiRoomPerformance } from "./utils/multi-room-debug";
@@ -43,7 +43,6 @@ export class GameManager {
   private initializeMultiRoomSystem(): void {
     if (MULTI_ROOM_CONFIG.enabled) {
       // Validate configuration
-      const { validateMultiRoomConfig } = require('./config/multi-room.config');
       const isValid = validateMultiRoomConfig();
 
       if (!isValid) {

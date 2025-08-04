@@ -5,7 +5,7 @@
  * functions for the multi-room harvesting system.
  */
 
-import { MULTI_ROOM_CONFIG } from '../config/multi-room.config';
+import { MULTI_ROOM_CONFIG, validateMultiRoomConfig } from '../config/multi-room.config';
 import { debugLog } from './Logger';
 import { getCreepsByRole } from '../types';
 import { getResourceCacheStats } from './multi-room-resources';
@@ -238,7 +238,6 @@ export function runMultiRoomDiagnostics(): boolean {
 
   // Test 1: Configuration validation
   console.log('  Test 1: Configuration validation...');
-  const { validateMultiRoomConfig } = require('../config/multi-room.config');
   if (!validateMultiRoomConfig()) {
     console.log('    ❌ Configuration validation failed');
     allTestsPassed = false;
