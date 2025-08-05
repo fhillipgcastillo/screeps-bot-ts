@@ -278,6 +278,38 @@ export class GameManager {
     }
   }
 
+  // AUTO-SPAWN CONTROL
+  // ============================================================================
+
+  /**
+   * Enable automatic spawning of creeps
+   */
+  public enableAutoSpawn(): void {
+    this.spawnManager.enableAutoSpawn();
+  }
+
+  /**
+   * Disable automatic spawning of creeps
+   */
+  public disableAutoSpawn(): void {
+    this.spawnManager.disableAutoSpawn();
+  }
+
+  /**
+   * Toggle automatic spawning of creeps
+   * @returns current state of auto-spawning
+   */
+  public toggleAutoSpawn(): boolean {
+    return this.spawnManager.toggleAutoSpawn();
+  }
+
+  /**
+   * Check if auto-spawning is enabled
+   */
+  public isAutoSpawnEnabled(): boolean {
+    return this.spawnManager.isAutoSpawnEnabled();
+  }
+
   /**
    * Check if the game is currently paused
    */

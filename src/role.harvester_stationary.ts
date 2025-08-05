@@ -85,7 +85,7 @@ const roleHarvester: RoleHarvester = {
         if (!target && creep.memory.sourceTarget) {
             target = sources.find(s => s.id === creep.memory.sourceTarget) || null;
             if (!target) {
-                console.log("not target available");
+               debugLog.log("not target available");
             }
         }
 
@@ -103,7 +103,7 @@ const roleHarvester: RoleHarvester = {
                     // creep.say("Moving...");
                     let movingError = creep.moveTo(sourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
                     if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
-                        console.log("Hvst mv2 ERR_NO_PATH", movingError); //most commont error when there's a lot of creeps
+                       debugLog.log("Hvst mv2 ERR_NO_PATH", movingError); //most commont error when there's a lot of creeps
                         creep.say("NO Pth")
                         this.cleanUpTargetsState(creep);
                         let targets = creep.room.find(FIND_SOURCES);
@@ -112,18 +112,18 @@ const roleHarvester: RoleHarvester = {
 
                     }
                 } else if (harvestAction === ERR_INVALID_TARGET) {
-                    console.log("Hvst ERR_INVALID_TARGET");
+                   debugLog.log("Hvst ERR_INVALID_TARGET");
                     creep.say("INV Tgt")
                     this.cleanUpTargetsState(creep);
                 } else if (harvestAction !== OK) {
-                    console.log(`${creep.name} Hvst Another error`, harvestAction);
+                   debugLog.log(`${creep.name} Hvst Another error`, harvestAction);
                     this.cleanUpTargetsState(creep);
                 }
             } else {
                 this.cleanUpTargetsState(creep);
             }
         } catch (error) {
-            console.log("harvest error", error)
+           debugLog.log("harvest error", error)
         }
     },
     storeNewHarvestTarget(creep) {
