@@ -94,6 +94,17 @@ export interface HarvesterMemory extends BaseCreepMemory {
     role: "harvester";
     sourceTargetId?: Id<Source>;
     lastStep?: boolean;
+
+    // Multi-room specific properties
+    multiRoom?: {
+        enabled: boolean;
+        homeRoom: string;
+        targetRoom?: string;
+        isMultiRoom: boolean;
+        roomTransitionStartTick?: number;
+        failureCount: number;
+        lastMultiRoomAttempt?: number;
+    };
 }
 
 /**
@@ -102,6 +113,17 @@ export interface HarvesterMemory extends BaseCreepMemory {
 export interface HaulerMemory extends BaseCreepMemory {
     role: "hauler";
     // Haulers use the common transfering and haulering flags
+
+    // Multi-room specific properties
+    multiRoom?: {
+        enabled: boolean;
+        homeRoom: string;
+        collectionRoom?: string;
+        returnPath?: string[];
+        isReturningHome: boolean;
+        failureCount: number;
+        lastMultiRoomAttempt?: number;
+    };
 }
 
 /**

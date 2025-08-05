@@ -2,6 +2,7 @@ import { GameManager } from "GameManager";
 import { CreepRole, BaseCreepMemory } from "./src/types";
 import { SpawnResult, SpawnStatus, ManualSpawner } from "./src/manual.spawner";
 import { UIDisplayOptions, GameStatistics, GameStatsUI } from "./src/ui";
+import { MULTI_ROOM_CONFIG } from "./src/config/multi-room.config";
 
 declare global {
    /*
@@ -102,6 +103,14 @@ declare global {
       disableDebug: () => void;
       toggleDebug: () => void;
       isDebugEnabled: () => boolean;
+
+      // Multi-Room Debugging Functions - accessible from game console
+      debugMultiRoom: () => void;
+      runMultiRoomDiagnostics: () => boolean;
+      exportMultiRoomStats: () => string;
+      clearPerformanceHistory: () => void;
+      clearResourceCache: (homeRoom?: string) => void;
+      multiRoomConfig: typeof MULTI_ROOM_CONFIG;
     }
   }
 }

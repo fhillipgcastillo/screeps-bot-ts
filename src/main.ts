@@ -27,6 +27,16 @@ import {
   getManualSpawner
 } from "./manual.spawner";
 
+// Multi-room debugging and utilities
+import {
+  debugMultiRoomOperations,
+  runMultiRoomDiagnostics,
+  exportMultiRoomStats,
+  clearPerformanceHistory
+} from "./utils/multi-room-debug";
+import { clearResourceCache } from "./utils/multi-room-resources";
+import { MULTI_ROOM_CONFIG } from "./config/multi-room.config";
+
 import {
   showCreeps,
   showRooms,
@@ -68,7 +78,14 @@ export {
   toggleVisual,
   updateVisualOverlay,
   helpUI,
-  getGameStatsUI
+  getGameStatsUI,
+  // Multi-room debugging functions
+  debugMultiRoomOperations,
+  runMultiRoomDiagnostics,
+  exportMultiRoomStats,
+  clearPerformanceHistory,
+  clearResourceCache,
+  MULTI_ROOM_CONFIG
 };
 
 // Export debug functions for external use
@@ -112,4 +129,12 @@ global.rooms = rooms;
 global.toggleVisual = toggleVisual;
 global.helpUI = helpUI;
 global.getGameStatsUI = getGameStatsUI;
+
+// Assign multi-room debugging functions to global for console access
+global.debugMultiRoom = debugMultiRoomOperations;
+global.runMultiRoomDiagnostics = runMultiRoomDiagnostics;
+global.exportMultiRoomStats = exportMultiRoomStats;
+global.clearPerformanceHistory = clearPerformanceHistory;
+global.clearResourceCache = clearResourceCache;
+global.multiRoomConfig = MULTI_ROOM_CONFIG;
 

@@ -1,5 +1,8 @@
 // import * as _ from "lodash";
 import { debugLog } from "./utils/Logger";
+import { MULTI_ROOM_CONFIG } from './config/multi-room.config';
+import { findMultiRoomSources } from './utils/multi-room-resources';
+import { isRoomSafe, isRoomAccessible } from './utils/room-safety';
 
 type RoleHauler = {
   spawn?: StructureSpawn,
@@ -17,6 +20,13 @@ type RoleHauler = {
   getNextClosestTarget: (creep: Creep, targets: any[]) => Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined,
   getAppropiateResourceTarget: (creep: Creep, targets: any[]) => Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined,
   stateSetter: (creep: Creep) => void,
+  // Multi-room functions
+  initializeMultiRoomMemory: (creep: Creep) => void,
+  shouldUseMultiRoom: (creep: Creep) => boolean,
+  findMultiRoomResources: (creep: Creep) => (Resource | Tombstone | Ruin)[] | null,
+  handleRoomTransition: (creep: Creep, targetRoom: string) => boolean,
+  handleReturnToHome: (creep: Creep) => boolean,
+  resetMultiRoomState: (creep: Creep) => void,
 };
 function cleanUpTargetsState(creep: Creep) {
   // this.memorizedPrevTargets(creep);
@@ -63,36 +73,72 @@ const haulerHandler: RoleHauler = {
     }
   },
   hauler: function (creep) {
-    let combineSources: (Tombstone | Ruin | Resource)[] = [];
+    // Initialize multi-room memory
+    this.initializeMultiRoomMemory(creep);
 
-    let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
-      {
-        filter: resource => resource.amount >= 10
-        // filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
+    // Handle return to home room if carrying resources and in multi-room mode
+    if (creep.memory.multiRoom?.isReturningHome && creep.store.energy > 0) {
+      if (!this.handleReturnToHome(creep)) {
+        return; // Still transitioning to home room
       }
-    );
-    const tombStones = creep.room.find(FIND_TOMBSTONES, {
-      filter: r => r.store.energy > 0
-    });
-    const ruins = creep.room.find(FIND_RUINS, {
-      filter: r => r.store.energy > 0
-    });
-    combineSources.concat(tombStones, ruins);
+    }
 
+    let combineSources: (Tombstone | Ruin | Resource)[] = [];
     let resourceTarget;
     let target: Tombstone | Ruin | null = null;
 
-    if (tombStones.length > 0) {
-      target = creep.pos.findClosestByRange(tombStones);
-    } else if (ruins.length > 0) {
-      target = creep.pos.findClosestByRange(ruins);
-    } else if (droppedResources.length > 0 && creep.memory.resourceTarget) {
-      resourceTarget = _.find(droppedResources, r => r.id === creep.memory.resourceTarget)
-    } else if (droppedResources.length > 0) {
-      debugLog.debug("no source target");
-      resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
-      // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
-      // resourceTarget = this.getClosestTarget(creep, availableTargets)
+    // Try multi-room resources first if enabled and appropriate
+    if (this.shouldUseMultiRoom(creep) && !creep.memory.multiRoom?.isReturningHome) {
+      const multiRoomResources = this.findMultiRoomResources(creep);
+      if (multiRoomResources && multiRoomResources.length > 0) {
+        const targetResource = multiRoomResources[0];
+        const targetRoom = targetResource.room?.name;
+
+        // Handle room transition if needed
+        if (targetRoom && targetRoom !== creep.room.name) {
+          if (this.handleRoomTransition(creep, targetRoom)) {
+            return; // Still transitioning to target room
+          }
+          // If transition failed, fall back to single-room logic
+        } else {
+          // Already in target room or same room, use the multi-room resource
+          if ('amount' in targetResource) {
+            resourceTarget = targetResource as Resource;
+          } else {
+            target = targetResource as (Tombstone | Ruin);
+          }
+        }
+      }
+    }
+
+    // Fall back to single-room logic if no multi-room resources found
+    if (!resourceTarget && !target) {
+      let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
+        {
+          filter: resource => resource.amount >= 10
+          // filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
+        }
+      );
+      const tombStones = creep.room.find(FIND_TOMBSTONES, {
+        filter: r => r.store.energy > 0
+      });
+      const ruins = creep.room.find(FIND_RUINS, {
+        filter: r => r.store.energy > 0
+      });
+      combineSources.concat(tombStones, ruins);
+
+      if (tombStones.length > 0) {
+        target = creep.pos.findClosestByRange(tombStones);
+      } else if (ruins.length > 0) {
+        target = creep.pos.findClosestByRange(ruins);
+      } else if (droppedResources.length > 0 && creep.memory.resourceTarget) {
+        resourceTarget = _.find(droppedResources, r => r.id === creep.memory.resourceTarget)
+      } else if (droppedResources.length > 0) {
+        debugLog.debug("no source target");
+        resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
+        // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
+        // resourceTarget = this.getClosestTarget(creep, availableTargets)
+      }
     }
 
     // find the next source of energy from `combineSources` similar to what I did on harvesting when there it not path
@@ -176,6 +222,14 @@ const haulerHandler: RoleHauler = {
     }
   },
   transfer(creep) {
+    // Handle return to home room if in multi-room mode and not in home room
+    const homeRoom = creep.memory.multiRoom?.homeRoom;
+    if (homeRoom && creep.room.name !== homeRoom && creep.memory.multiRoom?.collectionRoom) {
+      if (!this.handleReturnToHome(creep)) {
+        return; // Still transitioning to home room
+      }
+    }
+
     let targets = undefined;
     if (!this.spawn) return;
     _.sortByOrder
@@ -252,6 +306,235 @@ const haulerHandler: RoleHauler = {
     } /*else {
       console.log("didn't fit")
     }*/
+  },
+
+  // ============================================================================
+  // MULTI-ROOM FUNCTIONS
+  // ============================================================================
+
+  /**
+   * Initializes multi-room memory for a hauler creep
+   */
+  initializeMultiRoomMemory: function (creep) {
+    if (!creep.memory.multiRoom) {
+      creep.memory.multiRoom = {
+        enabled: MULTI_ROOM_CONFIG.enabled,
+        homeRoom: creep.room.name,
+        isReturningHome: false,
+        failureCount: 0
+      };
+    }
+  },
+
+  /**
+   * Determines if a hauler creep should use multi-room operations
+   */
+  shouldUseMultiRoom: function (creep) {
+    this.initializeMultiRoomMemory(creep);
+
+    // Check if multi-room is globally enabled
+    if (!MULTI_ROOM_CONFIG.enabled || !creep.memory.multiRoom?.enabled) {
+      return false;
+    }
+
+    // Check if creep has sufficient capacity
+    if (creep.store.getCapacity() < MULTI_ROOM_CONFIG.minCreepCapacity) {
+      return false;
+    }
+
+    // Check failure count
+    if (creep.memory.multiRoom.failureCount >= MULTI_ROOM_CONFIG.maxFailures) {
+      return false;
+    }
+
+    // Check if enough time has passed since last failure
+    const now = Game.time;
+    if (creep.memory.multiRoom.lastMultiRoomAttempt &&
+        (now - creep.memory.multiRoom.lastMultiRoomAttempt) < 100) {
+      return false;
+    }
+
+    return true;
+  },
+
+  /**
+   * Finds multi-room resources for the hauler to collect
+   */
+  findMultiRoomResources: function (creep) {
+    if (!this.shouldUseMultiRoom(creep)) {
+      return null;
+    }
+
+    try {
+      const homeRoom = creep.memory.multiRoom?.homeRoom || creep.room.name;
+      const multiRoomSources = findMultiRoomSources(homeRoom);
+
+      if (multiRoomSources.length === 0) {
+        return null;
+      }
+
+      // Look for dropped resources near multi-room sources
+      const allResources: (Resource | Tombstone | Ruin)[] = [];
+
+      for (const sourceInfo of multiRoomSources) {
+        const room = Game.rooms[sourceInfo.roomName];
+        if (!room) continue;
+
+        // Find dropped resources near the source
+        const droppedResources = room.find(FIND_DROPPED_RESOURCES, {
+          filter: resource => resource.resourceType === RESOURCE_ENERGY &&
+                             resource.amount >= 50 &&
+                             resource.pos.findInRange([sourceInfo.source], 3).length > 0
+        });
+
+        // Find tombstones and ruins with energy
+        const tombstones = room.find(FIND_TOMBSTONES, {
+          filter: tombstone => tombstone.store.energy > 0
+        });
+
+        const ruins = room.find(FIND_RUINS, {
+          filter: ruin => ruin.store.energy > 0
+        });
+
+        allResources.push(...droppedResources, ...tombstones, ...ruins);
+      }
+
+      if (allResources.length === 0) {
+        return null;
+      }
+
+      // Sort by priority (closer rooms first, then by resource amount)
+      allResources.sort((a, b) => {
+        const roomA = a.room?.name || '';
+        const roomB = b.room?.name || '';
+        const distanceA = Game.map.getRoomLinearDistance(homeRoom, roomA);
+        const distanceB = Game.map.getRoomLinearDistance(homeRoom, roomB);
+
+        if (distanceA !== distanceB) {
+          return distanceA - distanceB;
+        }
+
+        // Secondary sort by resource amount
+        const amountA = 'amount' in a ? a.amount : a.store.energy;
+        const amountB = 'amount' in b ? b.amount : b.store.energy;
+        return amountB - amountA;
+      });
+
+      // Update creep memory
+      if (creep.memory.multiRoom && allResources.length > 0) {
+        const targetResource = allResources[0];
+        creep.memory.multiRoom.collectionRoom = targetResource.room?.name;
+        creep.memory.multiRoom.lastMultiRoomAttempt = Game.time;
+      }
+
+      if (MULTI_ROOM_CONFIG.debugEnabled) {
+        debugLog.debug(`${creep.name} found ${allResources.length} multi-room resources`);
+      }
+
+      return allResources;
+
+    } catch (error) {
+      debugLog.warn(`Error finding multi-room resources for ${creep.name}:`, error);
+      this.resetMultiRoomState(creep);
+      return null;
+    }
+  },
+
+  /**
+   * Handles room transitions for multi-room hauling
+   */
+  handleRoomTransition: function (creep, targetRoom) {
+    const currentRoom = creep.room.name;
+
+    // If already in target room, no transition needed
+    if (currentRoom === targetRoom) {
+      return true;
+    }
+
+    // Check if room is still safe and accessible
+    if (!isRoomSafe(targetRoom) || !isRoomAccessible(currentRoom, targetRoom)) {
+      if (MULTI_ROOM_CONFIG.debugEnabled) {
+        debugLog.debug(`${creep.name} cannot access ${targetRoom} - resetting multi-room state`);
+      }
+      this.resetMultiRoomState(creep);
+      return false;
+    }
+
+    // Find exit to target room
+    try {
+      const exitDirection = Game.map.findExit(currentRoom, targetRoom);
+      if (exitDirection === ERR_NO_PATH || exitDirection === ERR_INVALID_ARGS) {
+        this.resetMultiRoomState(creep);
+        return false;
+      }
+
+      const exit = creep.pos.findClosestByRange(exitDirection);
+      if (exit) {
+        const moveResult = creep.moveTo(exit, {
+          visualizePathStyle: { stroke: '#00ffff' },
+          reusePath: 10
+        });
+
+        if (moveResult === ERR_NO_PATH) {
+          this.resetMultiRoomState(creep);
+          return false;
+        }
+      }
+
+      return true;
+
+    } catch (error) {
+      debugLog.warn(`Error handling room transition for ${creep.name}:`, error);
+      this.resetMultiRoomState(creep);
+      return false;
+    }
+  },
+
+  /**
+   * Handles returning to home room after collecting resources
+   */
+  handleReturnToHome: function (creep) {
+    const homeRoom = creep.memory.multiRoom?.homeRoom;
+    if (!homeRoom) {
+      return false;
+    }
+
+    const currentRoom = creep.room.name;
+
+    // If already in home room, return success
+    if (currentRoom === homeRoom) {
+      if (creep.memory.multiRoom) {
+        creep.memory.multiRoom.isReturningHome = false;
+        creep.memory.multiRoom.collectionRoom = undefined;
+      }
+      return true;
+    }
+
+    // Set returning home flag
+    if (creep.memory.multiRoom) {
+      creep.memory.multiRoom.isReturningHome = true;
+    }
+
+    // Handle room transition to home
+    return this.handleRoomTransition(creep, homeRoom);
+  },
+
+  /**
+   * Resets multi-room state and increments failure count
+   */
+  resetMultiRoomState: function (creep) {
+    if (creep.memory.multiRoom) {
+      creep.memory.multiRoom.isReturningHome = false;
+      creep.memory.multiRoom.collectionRoom = undefined;
+      creep.memory.multiRoom.failureCount++;
+
+      if (MULTI_ROOM_CONFIG.debugEnabled) {
+        debugLog.debug(`${creep.name} multi-room state reset, failures: ${creep.memory.multiRoom.failureCount}`);
+      }
+    }
+
+    // Clear current target to force new target selection
+    this.cleanUpTargetsState(creep);
   },
 }
 export default haulerHandler;
