@@ -36,6 +36,9 @@ RUN curl -sL https://deb.nodesource.com/setup_10.x | bash \
 # Create Screeps user
 RUN adduser --disabled-password --gecos "" --home $HOME $USER
 
+# For Spec-Kit - Pre-requirements
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
 # Set working directory
 WORKDIR $HOME
 RUN npm install -g rollup
