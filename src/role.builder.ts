@@ -145,11 +145,12 @@ const roleBuilder: RoleBuilder = {
         }
     },
     pickUpEnergy(creep) {
+        // Find containers with at least half of creep's carry capacity
+        const minEnergyNeeded = creep.store.getCapacity(RESOURCE_ENERGY) / 2;
         var containers = creep.room.find(FIND_STRUCTURES, {
             filter: (s) =>
                 s.structureType === STRUCTURE_CONTAINER
-                && s.store[RESOURCE_ENERGY] > 300
-            // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
+                && (s.store[RESOURCE_ENERGY] >= 300 || s.store[RESOURCE_ENERGY] >= minEnergyNeeded)
         });
 
         const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0 })

@@ -53,11 +53,12 @@ const roleUpgrader: RoleHauler = {
     pickUpEnergy(creep) {
         let energySource = undefined;
 
-        // Find containers with energy
+        // Find containers with at least half of creep's carry capacity
+        const minEnergyNeeded = creep.store.getCapacity(RESOURCE_ENERGY) / 2;
         const containers = creep.room.find(FIND_STRUCTURES, {
             filter: (s) =>
                 s.structureType === STRUCTURE_CONTAINER
-                && s.store[RESOURCE_ENERGY] > 300
+                && (s.store[RESOURCE_ENERGY] >= 300 || s.store[RESOURCE_ENERGY] >= minEnergyNeeded)
         });
 
         // Find extensions with energy
