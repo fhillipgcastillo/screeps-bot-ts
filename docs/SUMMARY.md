@@ -8,6 +8,10 @@
 - [Authenticating with Screeps](getting-started/authenticating.md)
 - [Deploying](getting-started/deploying.md)
 
+## Game Features
+
+- [Game Statistics UI](ui/game-stats-ui.md)
+
 ## In-Depth
 
 - [Module bundling](in-depth/module-bundling.md)
