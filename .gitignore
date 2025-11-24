@@ -92,3 +92,8 @@ $RECYCLE.BIN/
 *.lnk
 
 dist/
+
+.env
+config.yml
+!.circleci/config.yml
+test*
