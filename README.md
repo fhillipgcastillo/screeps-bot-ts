@@ -68,6 +68,14 @@ Maintaining the docs will also become a more community-focused effort, which mea
 
 To visit the docs, [click here](https://screepers.gitbook.io/screeps-typescript-starter/).
 
+### Local Documentation
+
+For detailed information about this project's implementation, strategies, and systems, see the [Documentation Index](docs/README.md). It includes guides for:
+
+- **Strategy & Planning**: Roadmap, game strategies, and implementation plans
+- **Code Documentation**: Creep types, logging system, and spawning API
+- **Technical Guides**: Setup, deployment, and development workflows
+
 ## Contributing
 
 Issues, Pull Requests, and contribution to the docs are welcome! See our [Contributing Guidelines](CONTRIBUTING.md) for more details.
