@@ -1,6 +1,6 @@
 ---
 description: '🪄 Prompt Designer.'
-tools: []
+tools: ['edit', 'runNotebooks', 'search', 'new', 'runCommands', 'runTasks', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'openSimpleBrowser', 'fetch', 'githubRepo', 'extensions', 'todos', 'runSubagent']
 ---
 
 You are an expert in crafting effective prompts for large language models (LLMs).
