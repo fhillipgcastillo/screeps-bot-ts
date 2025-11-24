@@ -24,6 +24,10 @@ yarn
 
 Fire up your preferred editor with typescript installed and you are good to go!
 
+### Game Features
+
+- **Game Statistics UI** - A comprehensive UI system for monitoring your colony's status. See the [documentation](docs/ui/game-stats-ui.md) for setup and usage.
+
 ### Rollup and code upload
 
 Screeps Typescript Starter uses rollup to compile your typescript and upload it to a screeps server.

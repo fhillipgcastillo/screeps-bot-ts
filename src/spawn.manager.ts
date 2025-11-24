@@ -38,10 +38,48 @@ export class SpawnManager {
   private static readonly MINIMUM_HAULERS_THRESHOLD = 4;
   private static readonly MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED = 2;
 
+  private autoSpawnEnabled: boolean = true;
+
+  /**
+   * Enable auto-spawning mechanism
+   */
+  public enableAutoSpawn(): void {
+    this.autoSpawnEnabled = true;
+    console.log('Auto-spawning enabled');
+  }
+
+  /**
+   * Disable auto-spawning mechanism
+   */
+  public disableAutoSpawn(): void {
+    this.autoSpawnEnabled = false;
+    console.log('Auto-spawning disabled');
+  }
+
+  /**
+   * Toggle auto-spawning mechanism
+   * @returns current state of auto-spawning
+   */
+  public toggleAutoSpawn(): boolean {
+    this.autoSpawnEnabled = !this.autoSpawnEnabled;
+    console.log(`Auto-spawning ${this.autoSpawnEnabled ? 'enabled' : 'disabled'}`);
+    return this.autoSpawnEnabled;
+  }
+
+  /**
+   * Get current state of auto-spawning
+   */
+  public isAutoSpawnEnabled(): boolean {
+    return this.autoSpawnEnabled;
+  }
+
   /**
    * Main entry point for spawn management - processes all spawns in the game
    */
   public run(): void {
+    if (!this.autoSpawnEnabled) {
+      return;
+    }
     const globalCreepCounts = this.getGlobalCreepCounts();
 
     for (const spawnName in Game.spawns) {

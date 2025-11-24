@@ -10,6 +10,10 @@ import roleRanger from "role.ranger";
 import { CreepRoleEnum, isValidCreepRole } from "./types";
 import { updateVisualOverlay } from "./ui";
 import { logger, debugLog } from "./utils/Logger";
+import { MULTI_ROOM_CONFIG, validateMultiRoomConfig } from "./config/multi-room.config";
+import { cleanupRoomCaches, updateRoomSafetyCache } from "./utils/room-safety";
+import { clearResourceCache, updateResourceDiscoveryCache } from "./utils/multi-room-resources";
+import { logPerformanceStats, monitorMultiRoomPerformance } from "./utils/multi-room-debug";
 
 
 export class GameManager {
@@ -28,6 +32,25 @@ export class GameManager {
 
     // Initialize logger with debug state
     logger.setDebug(this.debug);
+
+    // Initialize multi-room system
+    this.initializeMultiRoomSystem();
+  }
+
+  /**
+   * Initializes the multi-room system and validates configuration
+   */
+  private initializeMultiRoomSystem(): void {
+    if (MULTI_ROOM_CONFIG.enabled) {
+      // Validate configuration
+      const isValid = validateMultiRoomConfig();
+
+      if (!isValid) {
+        logger.warn('Multi-room configuration validation failed - some features may not work correctly');
+      } else if (MULTI_ROOM_CONFIG.debugEnabled) {
+        logger.info('Multi-room system initialized successfully');
+      }
+    }
   }
 
   /**
@@ -61,6 +84,17 @@ export class GameManager {
 
     // Update visual overlay if enabled
     updateVisualOverlay();
+
+    // Monitor multi-room performance and log stats
+    if (MULTI_ROOM_CONFIG.enabled) {
+      logPerformanceStats();
+
+      // Check for performance issues
+      const metrics = monitorMultiRoomPerformance();
+      if (metrics.cpuUsage > MULTI_ROOM_CONFIG.maxCpuUsage) {
+        logger.warn(`Multi-room CPU usage high: ${metrics.cpuUsage.toFixed(2)} (limit: ${MULTI_ROOM_CONFIG.maxCpuUsage})`);
+      }
+    }
   }
   handleSafeMode(spawn: StructureSpawn) {
     if (spawn.room?.controller) {
@@ -126,12 +160,79 @@ export class GameManager {
     }
   }
   cleanUpMemory() {
+    // Clean up dead creep memory
     for (var creepName in Memory.creeps) {
       if (!Game.creeps[creepName]) {
         delete Memory.creeps[creepName];
         logger.debug('Clearing non-existing creep memory:', creepName);
       }
     }
+
+    // Clean up multi-room memory periodically
+    if (MULTI_ROOM_CONFIG.enabled && Game.time % 100 === 0) {
+      this.cleanUpMultiRoomMemory();
+    }
+  }
+
+  /**
+   * Cleans up multi-room memory structures
+   */
+  private cleanUpMultiRoomMemory(): void {
+    try {
+      // Update room safety cache
+      updateRoomSafetyCache();
+
+      // Clean up expired room caches
+      cleanupRoomCaches();
+
+      // Update resource discovery cache
+      updateResourceDiscoveryCache();
+
+      // Validate and migrate creep multi-room memory
+      this.validateCreepMultiRoomMemory();
+
+      if (MULTI_ROOM_CONFIG.debugEnabled) {
+        debugLog.debug('Multi-room memory cleanup completed');
+      }
+    } catch (error) {
+      logger.error('Error during multi-room memory cleanup:', error);
+    }
+  }
+
+  /**
+   * Validates and migrates creep multi-room memory structures
+   */
+  private validateCreepMultiRoomMemory(): void {
+    Object.values(Game.creeps).forEach(creep => {
+      if (creep.memory.role === 'harvester' || creep.memory.role === 'hauler') {
+        // Initialize multi-room memory if missing
+        if (!creep.memory.multiRoom && MULTI_ROOM_CONFIG.enabled) {
+          creep.memory.multiRoom = {
+            enabled: MULTI_ROOM_CONFIG.enabled,
+            homeRoom: creep.room.name,
+            isMultiRoom: creep.memory.role === 'harvester' ? false : false,
+            isReturningHome: creep.memory.role === 'hauler' ? false : undefined,
+            failureCount: 0
+          };
+        }
+
+        // Reset failure count if it's too high
+        if (creep.memory.multiRoom && creep.memory.multiRoom.failureCount > MULTI_ROOM_CONFIG.maxFailures * 2) {
+          creep.memory.multiRoom.failureCount = 0;
+          debugLog.debug(`Reset failure count for ${creep.name}`);
+        }
+
+        // Clean up stale room transition data
+        if (creep.memory.multiRoom?.roomTransitionStartTick) {
+          const transitionAge = Game.time - creep.memory.multiRoom.roomTransitionStartTick;
+          if (transitionAge > MULTI_ROOM_CONFIG.roomTransitionTimeout * 2) {
+            creep.memory.multiRoom.roomTransitionStartTick = undefined;
+            creep.memory.multiRoom.targetRoom = undefined;
+            debugLog.debug(`Cleaned up stale transition data for ${creep.name}`);
+          }
+        }
+      }
+    });
   }
 
   public getActiveScreeps(): Creep[] {
@@ -175,6 +276,38 @@ export class GameManager {
     } else {
       logger.force("▶️ Game resumed - bot operations continuing");
     }
+  }
+
+  // AUTO-SPAWN CONTROL
+  // ============================================================================
+
+  /**
+   * Enable automatic spawning of creeps
+   */
+  public enableAutoSpawn(): void {
+    this.spawnManager.enableAutoSpawn();
+  }
+
+  /**
+   * Disable automatic spawning of creeps
+   */
+  public disableAutoSpawn(): void {
+    this.spawnManager.disableAutoSpawn();
+  }
+
+  /**
+   * Toggle automatic spawning of creeps
+   * @returns current state of auto-spawning
+   */
+  public toggleAutoSpawn(): boolean {
+    return this.spawnManager.toggleAutoSpawn();
+  }
+
+  /**
+   * Check if auto-spawning is enabled
+   */
+  public isAutoSpawnEnabled(): boolean {
+    return this.spawnManager.isAutoSpawnEnabled();
   }
 
   /**

@@ -1,4 +1,5 @@
 // import * as _ from "lodash";
+import { debugLog } from "utils/Logger";
 import { findClosestContainer, getContainers } from "./utils";
 // import roleHauler from "./role.hauler";
 
@@ -22,7 +23,7 @@ const roleUpgrader: RoleHauler = {
             this.stateSetter(creep);
             this.stateHandler(creep);
         } catch (error) {
-            console.log(`${creep.name} upgrader error:`, error);
+            debugLog.log(`${creep.name} upgrader error:`, error);
         }
     },
     stateSetter: function (creep) {
@@ -52,11 +53,12 @@ const roleUpgrader: RoleHauler = {
     pickUpEnergy(creep) {
         let energySource = undefined;
 
-        // Find containers with energy
+        // Find containers with at least half of creep's carry capacity
+        const minEnergyNeeded = creep.store.getCapacity(RESOURCE_ENERGY) / 2;
         const containers = creep.room.find(FIND_STRUCTURES, {
             filter: (s) =>
                 s.structureType === STRUCTURE_CONTAINER
-                && s.store[RESOURCE_ENERGY] > 300
+                && (s.store[RESOURCE_ENERGY] >= 300 || s.store[RESOURCE_ENERGY] >= minEnergyNeeded)
         });
 
         // Find extensions with energy
@@ -88,7 +90,7 @@ const roleUpgrader: RoleHauler = {
                     visualizePathStyle: { stroke: '#ffaa00' }
                 });
             } else if (withdrawResult !== OK) {
-                console.log(`${creep.name} withdraw error:`, withdrawResult);
+                debugLog.log(`${creep.name} withdraw error:`, withdrawResult);
             }
         } else {
             creep.say('No energy!');
