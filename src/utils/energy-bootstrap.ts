@@ -87,7 +87,14 @@ const EMERGENCY_TEMPLATE: SpawnTemplate = {
  * Harvester templates by tier
  */
 export const HARVESTER_TEMPLATES: SpawnTemplate[] = [
-  EMERGENCY_TEMPLATE,
+  {
+  tier: SpawnTier.EMERGENCY,
+  body: [WORK, MOVE],
+  energyCost: 150,
+  minEnergyRequired: 150,
+  maxEnergyUsage: 150,
+  description: "Emergency: 1 WORK + 1 MOVE  (150 energy)"
+},
   {
     tier: SpawnTier.NORMAL,
     body: [WORK, WORK, CARRY, MOVE, MOVE],
@@ -111,7 +118,14 @@ export const HARVESTER_TEMPLATES: SpawnTemplate[] = [
  * Optimized for energy transport with high CARRY ratio
  */
 export const HAULER_TEMPLATES: SpawnTemplate[] = [
-  EMERGENCY_TEMPLATE,
+    {
+  tier: SpawnTier.EMERGENCY,
+  body: [CARRY, MOVE],
+  energyCost: 100,
+  minEnergyRequired: 100,
+  maxEnergyUsage: 100,
+  description: "Emergency: 1 CARRY + 1 MOVE  (100 energy)"
+},
   {
     tier: SpawnTier.NORMAL,
     body: [CARRY, CARRY, CARRY, MOVE, MOVE],
