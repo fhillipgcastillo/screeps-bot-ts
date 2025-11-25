@@ -58,7 +58,7 @@ export const levelDefinitions: LevelDefinitions = {
   "2": {
     harvesters: {
       min: 4,
-      max: 12
+      max: 7
     },
     builders: {
       min: 2,
