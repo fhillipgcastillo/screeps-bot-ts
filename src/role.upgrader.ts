@@ -2,6 +2,7 @@
 import { debugLog } from "utils/Logger";
 import { findClosestContainer, getContainers } from "./utils";
 import { getCachedContainers } from "./utils/energy-bootstrap";
+import { getNextResourceTarget } from "./utils/resource-assignment";
 // import roleHauler from "./role.hauler";
 
 type RoleHauler = {
@@ -52,16 +53,13 @@ const roleUpgrader: RoleHauler = {
         }
     },
     pickUpEnergy(creep) {
-        let energySource = undefined;
-
-        // Use cached containers for better performance
-        const cachedContainers = getCachedContainers(creep.room.name);
-
         // Find containers with at least half of creep's carry capacity
         const minEnergyNeeded = creep.store.getCapacity(RESOURCE_ENERGY) / 2;
-        const validContainers = cachedContainers.filter(c =>
-            c.store[RESOURCE_ENERGY] >= 300 || c.store[RESOURCE_ENERGY] >= minEnergyNeeded
-        );
+        const containers = creep.room.find(FIND_STRUCTURES, {
+            filter: (s) =>
+                s.structureType === STRUCTURE_CONTAINER
+                && (s.store[RESOURCE_ENERGY] >= 300 || s.store[RESOURCE_ENERGY] >= minEnergyNeeded)
+        });
 
         // Find extensions with energy
         const extensions = creep.room.find(FIND_MY_STRUCTURES, {
@@ -70,32 +68,30 @@ const roleUpgrader: RoleHauler = {
                 && s.store[RESOURCE_ENERGY] > 0
         });
 
-        // Find spawn
-        const spawn = Game.spawns.Spawn1;
+        // Prioritize containers over extensions to preserve extensions for spawning
+        if (containers.length > 0) {
+            // Round-robin assignment for containers
+            let container = getNextResourceTarget(creep.room, 'upgrader', containers) as StructureContainer;
 
-        // Prioritize energy sources (cached first, then extensions, then spawn)
-        if (validContainers.length > 0) {
-            energySource = creep.pos.findClosestByRange(validContainers);
+            if (container) {
+                const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
+                if (withdrawAction === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
+            }
         } else if (extensions.length > 0) {
-            energySource = creep.pos.findClosestByRange(extensions);
-        } else if (spawn && spawn.store.getUsedCapacity(RESOURCE_ENERGY) > 100) {
-            // Only use spawn if it has more than 100 energy
-            energySource = spawn;
-        }
+            // Round-robin assignment for extensions
+            let theExtension = getNextResourceTarget(creep.room, 'upgrader', extensions) as StructureExtension;
 
-        // If we found an energy source, try to withdraw from it
-        if (energySource) {
-            const withdrawResult = creep.withdraw(energySource, RESOURCE_ENERGY);
-
-            if (withdrawResult === ERR_NOT_IN_RANGE) {
-                creep.moveTo(energySource, {
-                    visualizePathStyle: { stroke: '#ffaa00' }
-                });
-            } else if (withdrawResult !== OK) {
-                debugLog.log(`${creep.name} withdraw error:`, withdrawResult);
+            if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
         } else {
-            creep.say('No energy!');
+            // Fallback to spawn
+            let spawn = Game.spawns.Spawn1;
+            if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
+            }
         }
 
         // var droppedResources = creep.room.find(FIND_DROPPED_RESOURCES, {
