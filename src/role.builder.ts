@@ -1,6 +1,7 @@
 // import * as _ from "lodash";
 import { findClosestContainer, getContainers } from "./utils";
 import { debugLog } from "./utils/Logger";
+import { getCachedContainers } from "./utils/energy-bootstrap";
 
 type RoleBuilder = {
     run: (creep: Creep) => void,
@@ -55,7 +56,11 @@ const roleBuilder: RoleBuilder = {
     stateHandler: function (creep) {
         // var sources = creep.room.find(FIND_SOURCES);
         // sources.sort((a, b) => a.pos.findInRange(FIND_MY_CREEPS, 1).length - b.pos.findInRange(FIND_MY_CREEPS, 1).length);
-        var containers = getContainers(creep, 50)
+
+        // Use cached containers for better performance
+        const cachedContainers = getCachedContainers(creep.room.name);
+        const validContainers = cachedContainers.filter(c => c.store.energy > 0);
+        const containers = validContainers.length > 0 ? validContainers : getContainers(creep, 50);
 
         if (creep.memory.harvesting && containers.length > 0) {
             let container = findClosestContainer(creep, containers);

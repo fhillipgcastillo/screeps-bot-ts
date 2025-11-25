@@ -1,6 +1,7 @@
 // import * as _ from "lodash";
 import { debugLog } from "utils/Logger";
 import { findClosestContainer, getContainers } from "./utils";
+import { getCachedContainers } from "./utils/energy-bootstrap";
 // import roleHauler from "./role.hauler";
 
 type RoleHauler = {
@@ -53,13 +54,14 @@ const roleUpgrader: RoleHauler = {
     pickUpEnergy(creep) {
         let energySource = undefined;
 
+        // Use cached containers for better performance
+        const cachedContainers = getCachedContainers(creep.room.name);
+
         // Find containers with at least half of creep's carry capacity
         const minEnergyNeeded = creep.store.getCapacity(RESOURCE_ENERGY) / 2;
-        const containers = creep.room.find(FIND_STRUCTURES, {
-            filter: (s) =>
-                s.structureType === STRUCTURE_CONTAINER
-                && (s.store[RESOURCE_ENERGY] >= 300 || s.store[RESOURCE_ENERGY] >= minEnergyNeeded)
-        });
+        const validContainers = cachedContainers.filter(c =>
+            c.store[RESOURCE_ENERGY] >= 300 || c.store[RESOURCE_ENERGY] >= minEnergyNeeded
+        );
 
         // Find extensions with energy
         const extensions = creep.room.find(FIND_MY_STRUCTURES, {
@@ -71,9 +73,9 @@ const roleUpgrader: RoleHauler = {
         // Find spawn
         const spawn = Game.spawns.Spawn1;
 
-        // Prioritize energy sources
-        if (containers.length > 0) {
-            energySource = creep.pos.findClosestByRange(containers);
+        // Prioritize energy sources (cached first, then extensions, then spawn)
+        if (validContainers.length > 0) {
+            energySource = creep.pos.findClosestByRange(validContainers);
         } else if (extensions.length > 0) {
             energySource = creep.pos.findClosestByRange(extensions);
         } else if (spawn && spawn.store.getUsedCapacity(RESOURCE_ENERGY) > 100) {

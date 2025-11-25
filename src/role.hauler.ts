@@ -3,6 +3,7 @@ import { debugLog } from "./utils/Logger";
 import { MULTI_ROOM_CONFIG } from './config/multi-room.config';
 import { findMultiRoomSources } from './utils/multi-room-resources';
 import { isRoomSafe, isRoomAccessible } from './utils/room-safety';
+import { getCachedContainers } from './utils/energy-bootstrap';
 
 type RoleHauler = {
   spawn?: StructureSpawn,
@@ -232,15 +233,13 @@ const haulerHandler: RoleHauler = {
 
     let targets = undefined;
     if (!this.spawn) return;
-    _.sortByOrder
+
+    // Use cached containers to avoid repeated FIND operations
+    const cachedContainers = getCachedContainers(creep.room.name);
+
     const storageAreFull = this.spawn.store.getUsedCapacity(RESOURCE_ENERGY) / this.spawn.store.getCapacity(RESOURCE_ENERGY);
     const containers: StructureContainer[] = _.sortByOrder(
-      creep.room.find(FIND_STRUCTURES, {
-        filter: (s) =>
-          s.structureType === STRUCTURE_CONTAINER
-          && s.store.getFreeCapacity(RESOURCE_ENERGY) > 0
-        // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
-      }),
+      cachedContainers.filter(c => c.store.getFreeCapacity(RESOURCE_ENERGY) > 0),
       (c) => c.store.getFreeCapacity(RESOURCE_ENERGY),
       'asc'
     );
