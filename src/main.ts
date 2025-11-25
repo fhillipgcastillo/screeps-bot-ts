@@ -1,13 +1,6 @@
 import { GameManager } from "GameManager";
-
-// When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
-// This utility uses source maps to get the line numbers and file names of the original, TS source code
-// every 20 ticks, reset creeps action memory
-// export const loop = ErrorMapper.wrapLoop(() => {
 const gm =  new GameManager()
-export const loop = () => {
-  gm.tick();
-};
+
 
 
 import {
@@ -138,3 +131,11 @@ global.clearPerformanceHistory = clearPerformanceHistory;
 global.clearResourceCache = clearResourceCache;
 global.multiRoomConfig = MULTI_ROOM_CONFIG;
 
+
+// When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
+// This utility uses source maps to get the line numbers and file names of the original, TS source code
+// every 20 ticks, reset creeps action memory
+// export const loop = ErrorMapper.wrapLoop(() => {
+export const loop = () => {
+  gm.tick();
+};

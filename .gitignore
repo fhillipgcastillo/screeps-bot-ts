@@ -97,3 +97,5 @@ dist/
 config.yml
 !.circleci/config.yml
 test*
+launcher/deps/*
+launcher/node_modules/*

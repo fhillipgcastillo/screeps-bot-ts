@@ -21,3 +21,4 @@ After you all set and happy about the configurations run the docker composer
 docker compose up
 ```
 
+Note: `not tested yet.`
