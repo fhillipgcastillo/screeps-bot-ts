@@ -46,16 +46,23 @@ export interface SpawnResult {
 /**
  * Energy reserve configuration per controller level
  * Prevents spawning large bodies when energy is unpredictable
+ *
+ * Strategy:
+ * - Emergency tier (200 energy max) at levels 1-2
+ * - Normal tier (360 energy max) at levels 2-3
+ * - Advanced tier (650 energy max) at levels 4-8
+ *
+ * Reserve = allows safe spawning + maintains minimum buffer for room sustainability
  */
 export const ENERGY_RESERVE_THRESHOLDS: { [level: number]: number } = {
-  1: 149,   // Level 1: minimal buffer, spawn at 150+
-  2: 200,   // Level 2: slightly higher buffer for larger bodies
-  3: 300,   // Level 3+: significant buffer for complex spawns
-  4: 400,
-  5: 500,
-  6: 600,
-  7: 700,
-  8: 800
+  1: 50,    // Level 1: Emergency spawning (200) + 50 buffer = can spawn at 250
+  2: 100,   // Level 2: Transitioning to NORMAL (360) + 100 buffer = can spawn at 460
+  3: 150,   // Level 3: NORMAL tier (360) + 150 buffer = can spawn at 510
+  4: 200,   // Level 4: Early ADVANCED (640) + 200 buffer = can spawn at 840
+  5: 250,   // Level 5: ADVANCED tier (650) + 250 buffer = can spawn at 900
+  6: 300,   // Level 6: Full ADVANCED (650) + 300 buffer = can spawn at 950
+  7: 350,   // Level 7: Expansion phase (650) + 350 buffer = can spawn at 1000+
+  8: 400    // Level 8: Peak economy (650) + 400 buffer = maximum safety
 };
 
 /**
@@ -88,13 +95,13 @@ const EMERGENCY_TEMPLATE: SpawnTemplate = {
  */
 export const HARVESTER_TEMPLATES: SpawnTemplate[] = [
   {
-  tier: SpawnTier.EMERGENCY,
-  body: [WORK, MOVE],
-  energyCost: 150,
-  minEnergyRequired: 150,
-  maxEnergyUsage: 150,
-  description: "Emergency: 1 WORK + 1 MOVE  (150 energy)"
-},
+    tier: SpawnTier.EMERGENCY,
+    body: [WORK, MOVE],
+    energyCost: 150,
+    minEnergyRequired: 150,
+    maxEnergyUsage: 150,
+    description: "Emergency: 1 WORK + 1 MOVE  (150 energy)"
+  },
   {
     tier: SpawnTier.NORMAL,
     body: [WORK, WORK, CARRY, MOVE, MOVE],
@@ -118,14 +125,14 @@ export const HARVESTER_TEMPLATES: SpawnTemplate[] = [
  * Optimized for energy transport with high CARRY ratio
  */
 export const HAULER_TEMPLATES: SpawnTemplate[] = [
-    {
-  tier: SpawnTier.EMERGENCY,
-  body: [CARRY, MOVE],
-  energyCost: 100,
-  minEnergyRequired: 100,
-  maxEnergyUsage: 100,
-  description: "Emergency: 1 CARRY + 1 MOVE  (100 energy)"
-},
+  {
+    tier: SpawnTier.EMERGENCY,
+    body: [CARRY, MOVE],
+    energyCost: 100,
+    minEnergyRequired: 100,
+    maxEnergyUsage: 100,
+    description: "Emergency: 1 CARRY + 1 MOVE  (100 energy)"
+  },
   {
     tier: SpawnTier.NORMAL,
     body: [CARRY, CARRY, CARRY, MOVE, MOVE],
@@ -367,6 +374,35 @@ export function canSafelySpawn(
 export function isInRecoveryMode(spawn: StructureSpawn, activeHarvesters: number = 0): boolean {
   const energyRatio = spawn.store[RESOURCE_ENERGY] / spawn.store.getCapacity(RESOURCE_ENERGY);
   return energyRatio < 0.3 && activeHarvesters === 0;
+}
+
+/**
+ * Get the current spawn tier for a room based on its energy capacity and controller level
+ *
+ * @param room - The room to check
+ * @returns The current SpawnTier enum value
+ */
+export function getCurrentSpawnTier(room: Room): SpawnTier {
+  const energyCapacity = room.energyCapacityAvailable;
+  const controllerLevel = room.controller?.level || 0;
+
+  // Check against Harvester templates as the baseline for room capability
+  // We use the minEnergyRequired to determine if we can support that tier
+
+  // Check Advanced
+  const advancedTemplate = HARVESTER_TEMPLATES.find(t => t.tier === SpawnTier.ADVANCED);
+  if (advancedTemplate && energyCapacity >= advancedTemplate.minEnergyRequired && controllerLevel >= 2) {
+    return SpawnTier.ADVANCED;
+  }
+
+  // Check Normal
+  const normalTemplate = HARVESTER_TEMPLATES.find(t => t.tier === SpawnTier.NORMAL);
+  if (normalTemplate && energyCapacity >= normalTemplate.minEnergyRequired) {
+    return SpawnTier.NORMAL;
+  }
+
+  // Default to Emergency
+  return SpawnTier.EMERGENCY;
 }
 
 // ============================================================================

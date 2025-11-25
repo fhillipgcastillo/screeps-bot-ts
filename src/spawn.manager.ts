@@ -1,13 +1,14 @@
 import { levelDefinitions, LevelDefinition } from "./levels.handler";
 import { CreepRole, CreepRoleEnum, getCreepsByRole } from "./types";
-import { debugLog } from "./utils/Logger";
+import { debugLog, logger } from "./utils/Logger";
 import {
   selectBestTemplate,
   canSafelySpawn,
   isInRecoveryMode,
   getEnergyReserveThreshold,
   updateContainerCache,
-  getCachedContainers
+  getCachedContainers,
+  getCurrentSpawnTier
 } from "./utils/energy-bootstrap";
 import { initializeMemoryHelpers, runConditionalCleanup } from "./utils/memoryHelpers";
 
@@ -187,6 +188,7 @@ export class SpawnManager {
   public logDebugInfo(context: SpawnContext): void {
     if (Game.time % SpawnManager.DEBUG_INTERVAL === 0) {
       debugLog.debug(`Room Energy ${context.availableEnergy}/${context.energyCapacity}`);
+      debugLog.debug(`Spawn Tier: ${getCurrentSpawnTier(context.spawn.room)}`);
       debugLog.debug(`Enough creeps: ${context.enoughCreeps}`);
       debugLog.debug(`Harvesters: ${context.creepCounts.harvesters}`);
       debugLog.debug(`Haulers: ${context.creepCounts.haulers}`);
@@ -290,7 +292,6 @@ export class SpawnManager {
     if (counts.haulers === 0) {
       return "hauler";
     }
-
     // Critical: scale harvesters to minimum after bootstrap
     if (counts.harvesters < levelHandler.harvesters.min) {
       return "harvester";

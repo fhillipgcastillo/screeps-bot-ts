@@ -2,6 +2,7 @@
 import { findClosestContainer, getContainers } from "./utils";
 import { debugLog } from "./utils/Logger";
 import { getCachedContainers } from "./utils/energy-bootstrap";
+import { getNextResourceTarget } from "./utils/resource-assignment";
 
 type RoleBuilder = {
     run: (creep: Creep) => void,
@@ -159,20 +160,26 @@ const roleBuilder: RoleBuilder = {
         });
 
         const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0 })
-        let container = containers ? creep.pos.findClosestByRange(containers) : null;
-        if (extensions.length > 0) {
-            let theExtension = creep.pos.findClosestByRange(extensions);
+
+        if (containers.length > 0) {
+            // Round-robin assignment for containers
+            let container = getNextResourceTarget(creep.room, 'builder', containers) as StructureContainer;
+
+            if (container) {
+                const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
+                if (withdrawAction === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
+            }
+        } else if (extensions.length > 0) {
+            // Round-robin assignment for extensions
+            let theExtension = getNextResourceTarget(creep.room, 'builder', extensions) as StructureExtension;
 
             if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
         }
-        else if (container) {
-            const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
-            if (withdrawAction === ERR_NOT_IN_RANGE) {
-                creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-        } else if (!container || !extensions) {
+        else {
             let spawn = Game.spawns.Spawn1;
             if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
                 creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });

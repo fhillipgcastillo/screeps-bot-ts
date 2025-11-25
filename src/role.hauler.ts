@@ -4,6 +4,7 @@ import { MULTI_ROOM_CONFIG } from './config/multi-room.config';
 import { findMultiRoomSources } from './utils/multi-room-resources';
 import { isRoomSafe, isRoomAccessible } from './utils/room-safety';
 import { getCachedContainers } from './utils/energy-bootstrap';
+import { getNextResourceTarget } from './utils/resource-assignment';
 
 type RoleHauler = {
   spawn?: StructureSpawn,
@@ -129,16 +130,17 @@ const haulerHandler: RoleHauler = {
       combineSources.concat(tombStones, ruins);
 
       if (tombStones.length > 0) {
-        target = creep.pos.findClosestByRange(tombStones);
+        // Round-robin for tombstones
+        target = getNextResourceTarget(creep.room, 'hauler', tombStones) as Tombstone;
       } else if (ruins.length > 0) {
-        target = creep.pos.findClosestByRange(ruins);
+        // Round-robin for ruins
+        target = getNextResourceTarget(creep.room, 'hauler', ruins) as Ruin;
       } else if (droppedResources.length > 0 && creep.memory.resourceTarget) {
         resourceTarget = _.find(droppedResources, r => r.id === creep.memory.resourceTarget)
       } else if (droppedResources.length > 0) {
-        debugLog.debug("no source target");
-        resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
-        // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
-        // resourceTarget = this.getClosestTarget(creep, availableTargets)
+        debugLog.debug("no source target - assigning new via round-robin");
+        // Round-robin for dropped resources
+        resourceTarget = getNextResourceTarget(creep.room, 'hauler', droppedResources) as Resource;
       }
     }
 

@@ -1,5 +1,6 @@
 import { CreepRole, CreepRoleEnum } from "../types";
 import { getCurrentCreepCounts } from "../manual.spawner";
+import { getCurrentSpawnTier } from "../utils/energy-bootstrap";
 
 /**
  * Interface for UI display options
@@ -21,6 +22,7 @@ export interface RoomStats {
   energyCapacity: number;
   controllerLevel?: number;
   spawns: number;
+  spawnTier: string;
 }
 
 /**
@@ -62,13 +64,14 @@ export class GameStatsUI {
 
     const creepCounts = getCurrentCreepCounts();
     const totalCreeps = Object.values(creepCounts).reduce((sum, count) => sum + count, 0);
-    
+
     const roomStats: RoomStats[] = Object.values(Game.rooms).map(room => ({
       name: room.name,
       energyAvailable: room.energyAvailable,
       energyCapacity: room.energyCapacityAvailable,
       controllerLevel: room.controller?.level,
-      spawns: room.find(FIND_MY_SPAWNS).length
+      spawns: room.find(FIND_MY_SPAWNS).length,
+      spawnTier: getCurrentSpawnTier(room)
     }));
 
     this.cachedStats = {
@@ -106,13 +109,13 @@ export class GameStatsUI {
 
     // Role counts
     const roleEntries = Object.entries(stats.creepCounts) as [CreepRole, number][];
-    
+
     for (const [role, count] of roleEntries) {
       if (!opts.showEmptyRoles && count === 0) continue;
-      
+
       const roleName = this.formatRoleName(role);
       const countStr = count.toString();
-      
+
       if (opts.compact) {
         lines.push(`${roleName}: ${countStr}`);
       } else {
@@ -128,10 +131,10 @@ export class GameStatsUI {
 
     // Total
     if (opts.showTotal) {
-      const totalLine = opts.compact ? 
-        `Total: ${stats.totalCreeps}` : 
+      const totalLine = opts.compact ?
+        `Total: ${stats.totalCreeps}` :
         `${'Total'.padEnd(12)}: ${stats.totalCreeps.toString().padStart(3)}`;
-      
+
       if (opts.colorize) {
         lines.push(`<span style='color:#ffff00'>${totalLine}</span>`);
       } else {
@@ -158,9 +161,9 @@ export class GameStatsUI {
     for (const room of stats.roomStats) {
       const energyPercent = Math.round((room.energyAvailable / room.energyCapacity) * 100);
       const levelStr = room.controllerLevel ? `RCL${room.controllerLevel}` : 'No Controller';
-      
-      const roomLine = `${room.name}: ${levelStr}, Energy: ${room.energyAvailable}/${room.energyCapacity} (${energyPercent}%), Spawns: ${room.spawns}`;
-      
+
+      const roomLine = `${room.name}: ${levelStr}, Tier: ${room.spawnTier}, Energy: ${room.energyAvailable}/${room.energyCapacity} (${energyPercent}%), Spawns: ${room.spawns}`;
+
       if (opts.colorize) {
         const energyColor = energyPercent > 80 ? '#66ff66' : energyPercent > 50 ? '#ffff66' : '#ff6666';
         lines.push(`<span style='color:${energyColor}'>${roomLine}</span>`);
@@ -211,38 +214,49 @@ export class GameStatsUI {
 
     const stats = this.getGameStatistics();
     const visual = room.visual;
-    
+
     let currentY = y;
-    
+
     // Title
-    visual.text('Creep Stats', x, currentY, { 
-      color: '#00ff00', 
-      font: 0.6, 
-      align: 'left' 
+    visual.text('Creep Stats', x, currentY, {
+      color: '#00ff00',
+      font: 0.6,
+      align: 'left'
     });
     currentY += 0.8;
+
+    // Spawn Tier
+    const roomStats = stats.roomStats.find(r => r.name === roomName);
+    if (roomStats) {
+      visual.text(`Tier: ${roomStats.spawnTier}`, x, currentY, {
+        color: '#00ffff',
+        font: 0.5,
+        align: 'left'
+      });
+      currentY += 0.6;
+    }
 
     // Role counts
     const roleEntries = Object.entries(stats.creepCounts) as [CreepRole, number][];
     for (const [role, count] of roleEntries) {
       if (count === 0) continue;
-      
+
       const text = `${this.formatRoleName(role)}: ${count}`;
       const color = count > 0 ? '#66ff66' : '#ff6666';
-      
-      visual.text(text, x, currentY, { 
-        color, 
-        font: 0.5, 
-        align: 'left' 
+
+      visual.text(text, x, currentY, {
+        color,
+        font: 0.5,
+        align: 'left'
       });
       currentY += 0.6;
     }
 
     // Total
-    visual.text(`Total: ${stats.totalCreeps}`, x, currentY, { 
-      color: '#ffff00', 
-      font: 0.5, 
-      align: 'left' 
+    visual.text(`Total: ${stats.totalCreeps}`, x, currentY, {
+      color: '#ffff00',
+      font: 0.5,
+      align: 'left'
     });
   }
 }
