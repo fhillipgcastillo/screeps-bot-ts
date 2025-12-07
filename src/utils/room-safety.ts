@@ -102,7 +102,7 @@ export function isRoomSafe(roomName: string, forceRefresh: boolean = false): boo
   // Use cached result if available and not expired
   if (!forceRefresh && cached && (now - cached.lastChecked) < MULTI_ROOM_CONFIG.safetyCacheDuration) {
     if (MULTI_ROOM_CONFIG.debugEnabled) {
-      debugLog.debug(`Room safety (cached): ${roomName} = ${cached.status}`);
+      debugLog.debug(`Room safety [CACHE HIT]: ${roomName} = ${cached.status} (age: ${now - cached.lastChecked}t)`);
     }
     return cached.status === RoomSafetyStatus.SAFE;
   }
@@ -114,10 +114,37 @@ export function isRoomSafe(roomName: string, forceRefresh: boolean = false): boo
   Memory.multiRoom!.roomSafety![roomName] = safetyInfo;
 
   if (MULTI_ROOM_CONFIG.debugEnabled) {
-    debugLog.debug(`Room safety (fresh): ${roomName} = ${safetyInfo.status}, hostiles: ${safetyInfo.hostileCreeps}/${safetyInfo.hostileStructures}`);
+    debugLog.debug(`Room safety [CACHE MISS]: ${roomName} = ${safetyInfo.status}, hostiles: ${safetyInfo.hostileCreeps}/${safetyInfo.hostileStructures}`);
   }
 
   return safetyInfo.status === RoomSafetyStatus.SAFE;
+}
+
+/**
+ * Checks room safety immediately before entering (bypasses cache)
+ * Use this for critical decisions like room transitions to ensure real-time threat detection
+ *
+ * @param roomName - Name of the room to check
+ * @returns true if the room is safe to enter right now
+ */
+export function checkRoomSafetyBeforeEntry(roomName: string): boolean {
+  // Always use fresh check for entry decisions (bypass cache)
+  const safetyInfo = assessRoomSafety(roomName);
+
+  const isSafe = safetyInfo.status === RoomSafetyStatus.SAFE;
+
+  if (MULTI_ROOM_CONFIG.debugEnabled) {
+    debugLog.debug(
+      `Safety check before entry to ${roomName}: ${isSafe ? 'SAFE' : 'UNSAFE'} ` +
+      `(hostiles: ${safetyInfo.hostileCreeps}/${safetyInfo.hostileStructures})`
+    );
+  }
+
+  // Update cache with fresh result
+  initializeMultiRoomMemory();
+  Memory.multiRoom!.roomSafety![roomName] = safetyInfo;
+
+  return isSafe;
 }
 
 /**

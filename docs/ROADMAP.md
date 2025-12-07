@@ -107,7 +107,7 @@ This roadmap outlines the transition from a single-room, reactive bot to a multi
 
 ## Roadmap: 5 Phases
 
-### Phase 1: Spawn Stability & Early-Game Fix
+### Phase 1: Spawn Stability & Early-Game Fix - DONE
 **Duration**: Weeks 1–2
 **Goal**: Ensure bot recovers from 0 energy and progresses reliably through levels 1–2
 **Key Changes**:

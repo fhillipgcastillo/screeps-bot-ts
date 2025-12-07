@@ -37,6 +37,14 @@ import {
 } from "./utils/multi-room-debug";
 import { clearResourceCache } from "./utils/multi-room-resources";
 import { MULTI_ROOM_CONFIG } from "./config/multi-room.config";
+import {
+  initializeConsoleCommands,
+  toggleMultiRoom,
+  enableMultiRoom,
+  disableMultiRoom,
+  getMultiRoomStatus,
+  resetMultiRoomCache
+} from "./utils/consoleCommands";
 
 import {
   showCreeps,
@@ -86,7 +94,13 @@ export {
   exportMultiRoomStats,
   clearPerformanceHistory,
   clearResourceCache,
-  MULTI_ROOM_CONFIG
+  MULTI_ROOM_CONFIG,
+  // Multi-room console commands
+  toggleMultiRoom,
+  enableMultiRoom,
+  disableMultiRoom,
+  getMultiRoomStatus,
+  resetMultiRoomCache
 };
 
 // Export debug functions for external use
@@ -96,6 +110,9 @@ export const toggleDebug = () => gm.toggleDebug();
 export const isDebugEnabled = () => gm.isDebugEnabled();
 
 global.gm = gm;
+
+// Initialize console commands for multi-room control
+initializeConsoleCommands();
 
 // Assign debug functions to global for console access
 global.enableDebug = () => gm.enableDebug();

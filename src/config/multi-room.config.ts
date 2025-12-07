@@ -1,6 +1,6 @@
 /**
  * Multi-Room Resource Harvesting Configuration
- * 
+ *
  * This configuration file manages all settings related to multi-room operations,
  * including exploration depth, safety parameters, and resource prioritization.
  */
@@ -87,6 +87,18 @@ export const ROOM_TYPE_PRIORITY = {
  * Sources below this threshold will be ignored
  */
 export const MIN_SOURCE_ENERGY_THRESHOLD = 500;
+
+/**
+ * Minimum energy amount in a source before triggering harvester migration
+ * When a source drops below this threshold, harvesters will seek better alternatives
+ */
+export const MIN_SOURCE_ENERGY_FOR_MIGRATION = 300;
+
+/**
+ * Interval (in ticks) for checking source profitability
+ * Harvesters will reassess their current source every N ticks to decide if migration is needed
+ */
+export const SOURCE_PROFITABILITY_CHECK_INTERVAL = 50;
 
 /**
  * Maximum distance (in rooms) to consider for resource collection
@@ -227,32 +239,34 @@ export const MULTI_ROOM_CONFIG = {
   explorationDepth: EXPLORATION_DEPTH,
   maxHarvesters: MAX_MULTI_ROOM_HARVESTERS,
   maxHaulers: MAX_MULTI_ROOM_HAULERS,
-  
+
   // Safety settings
   safetyCheckInterval: SAFETY_CHECK_INTERVAL,
   safetyCacheDuration: SAFETY_CACHE_DURATION,
   maxHostileCreeps: MAX_HOSTILE_CREEPS_THRESHOLD,
   maxHostileStructures: MAX_HOSTILE_STRUCTURES_THRESHOLD,
   minControllerLevel: MIN_SAFE_CONTROLLER_LEVEL,
-  
+
   // Resource settings
   roomTypePriority: ROOM_TYPE_PRIORITY,
   minSourceEnergy: MIN_SOURCE_ENERGY_THRESHOLD,
+  minSourceEnergyForMigration: MIN_SOURCE_ENERGY_FOR_MIGRATION,
+  sourceProfitabilityCheckInterval: SOURCE_PROFITABILITY_CHECK_INTERVAL,
   maxCollectionDistance: MAX_RESOURCE_COLLECTION_DISTANCE,
   distancePriorityMultiplier: DISTANCE_PRIORITY_MULTIPLIER,
-  
+
   // Performance settings
   maxCpuUsage: MAX_MULTI_ROOM_CPU_USAGE,
   resourceDiscoveryInterval: RESOURCE_DISCOVERY_INTERVAL,
   maxRoomsScanPerTick: MAX_ROOMS_SCAN_PER_TICK,
   resourceCacheDuration: RESOURCE_CACHE_DURATION,
-  
+
   // Creep behavior settings
   maxCreepsPerSource: MAX_CREEPS_PER_SOURCE,
   minCreepCapacity: MIN_MULTI_ROOM_CREEP_CAPACITY,
   roomTransitionTimeout: ROOM_TRANSITION_TIMEOUT,
   maxFailures: MAX_MULTI_ROOM_FAILURES,
-  
+
   // Debug settings
   debugEnabled: ENABLE_MULTI_ROOM_DEBUG,
   visualsEnabled: ENABLE_MULTI_ROOM_VISUALS,
@@ -265,24 +279,24 @@ export const MULTI_ROOM_CONFIG = {
  */
 export function validateMultiRoomConfig(): boolean {
   let isValid = true;
-  
+
   if (EXPLORATION_DEPTH < 0 || EXPLORATION_DEPTH > 2) {
     console.log('⚠️ Invalid EXPLORATION_DEPTH: must be 0, 1, or 2');
     isValid = false;
   }
-  
+
   if (MAX_MULTI_ROOM_HARVESTERS < 0 || MAX_MULTI_ROOM_HAULERS < 0) {
     console.log('⚠️ Invalid max creep limits: must be non-negative');
     isValid = false;
   }
-  
+
   if (SAFETY_CHECK_INTERVAL < 10) {
     console.log('⚠️ SAFETY_CHECK_INTERVAL too low: may cause CPU issues');
   }
-  
+
   if (MAX_MULTI_ROOM_CPU_USAGE > 10) {
     console.log('⚠️ MAX_MULTI_ROOM_CPU_USAGE very high: may cause CPU limit issues');
   }
-  
+
   return isValid;
 }

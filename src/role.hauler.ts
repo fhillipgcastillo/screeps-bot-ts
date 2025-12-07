@@ -2,9 +2,10 @@
 import { debugLog } from "./utils/Logger";
 import { MULTI_ROOM_CONFIG } from './config/multi-room.config';
 import { findMultiRoomSources } from './utils/multi-room-resources';
-import { isRoomSafe, isRoomAccessible } from './utils/room-safety';
+import { isRoomSafe, isRoomAccessible, checkRoomSafetyBeforeEntry } from './utils/room-safety';
 import { getCachedContainers } from './utils/energy-bootstrap';
 import { getNextResourceTarget } from './utils/resource-assignment';
+import { isMultiRoomEnabled } from './utils/consoleCommands';
 
 type RoleHauler = {
   spawn?: StructureSpawn,
@@ -333,8 +334,8 @@ const haulerHandler: RoleHauler = {
   shouldUseMultiRoom: function (creep) {
     this.initializeMultiRoomMemory(creep);
 
-    // Check if multi-room is globally enabled
-    if (!MULTI_ROOM_CONFIG.enabled || !creep.memory.multiRoom?.enabled) {
+    // Check if multi-room is globally enabled (respects console toggle)
+    if (!isMultiRoomEnabled() || !creep.memory.multiRoom?.enabled) {
       return false;
     }
 
@@ -452,10 +453,10 @@ const haulerHandler: RoleHauler = {
       return true;
     }
 
-    // Check if room is still safe and accessible
-    if (!isRoomSafe(targetRoom) || !isRoomAccessible(currentRoom, targetRoom)) {
+    // Real-time safety check before committing to transition
+    if (!checkRoomSafetyBeforeEntry(targetRoom) || !isRoomAccessible(currentRoom, targetRoom)) {
       if (MULTI_ROOM_CONFIG.debugEnabled) {
-        debugLog.debug(`${creep.name} cannot access ${targetRoom} - resetting multi-room state`);
+        debugLog.warn(`${creep.name} (hauler) cannot access ${targetRoom} (safety/accessibility failed)`);
       }
       this.resetMultiRoomState(creep);
       return false;

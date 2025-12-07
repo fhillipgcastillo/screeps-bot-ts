@@ -1,8 +1,10 @@
 // import * as _ from "lodash";
 import { MULTI_ROOM_CONFIG } from './config/multi-room.config';
-import { findMultiRoomSources } from './utils/multi-room-resources';
-import { isRoomSafe, isRoomAccessible } from './utils/room-safety';
+import { findMultiRoomSources, filterDepletedSources } from './utils/multi-room-resources';
+import { isRoomSafe, isRoomAccessible, checkRoomSafetyBeforeEntry } from './utils/room-safety';
 import { debugLog } from './utils/Logger';
+import { shouldMigrateToNewSource, scoreSourceProfitability } from './utils/sourceProfiler';
+import { isMultiRoomEnabled } from './utils/consoleCommands';
 
 type RoleHarvester = {
     run: (creep: Creep) => void,
@@ -45,6 +47,40 @@ const roleHarvester: RoleHarvester = {
     newLogicSourceTarget: function (creep) {
         // Initialize multi-room memory
         this.initializeMultiRoomMemory(creep);
+
+        // Periodic profitability check for migration (every 50 ticks)
+        const shouldCheckProfitability = !creep.memory.multiRoom?.lastProfitabilityCheck ||
+            (Game.time - creep.memory.multiRoom.lastProfitabilityCheck) >= MULTI_ROOM_CONFIG.sourceProfitabilityCheckInterval;
+
+        if (shouldCheckProfitability && creep.memory.sourceTarget) {
+            const currentSource = Game.getObjectById(creep.memory.sourceTarget as Id<Source>);
+
+            if (currentSource && this.shouldUseMultiRoom(creep)) {
+                // Get all available sources (multi-room and single-room)
+                const multiRoomSources = findMultiRoomSources(creep.memory.multiRoom?.homeRoom || creep.room.name);
+                const allSources = multiRoomSources.map(s => s.source);
+
+                // Add local sources as fallback
+                const localSources = creep.room.find(FIND_SOURCES);
+                localSources.forEach(s => {
+                    if (!allSources.find(existing => existing.id === s.id)) {
+                        allSources.push(s);
+                    }
+                });
+
+                // Check if migration is beneficial
+                if (shouldMigrateToNewSource(currentSource, allSources, creep)) {
+                    debugLog.info(`${creep.name} triggering migration from depleted source`);
+                    creep.memory.sourceTarget = undefined; // Force new target selection
+                    creep.memory.multiRoom!.lastProfitabilityCheck = Game.time;
+                }
+            }
+
+            // Update check timestamp
+            if (creep.memory.multiRoom) {
+                creep.memory.multiRoom.lastProfitabilityCheck = Game.time;
+            }
+        }
 
         // Try multi-room target first if enabled and appropriate
         if (this.shouldUseMultiRoom(creep)) {
@@ -218,8 +254,8 @@ const roleHarvester: RoleHarvester = {
     shouldUseMultiRoom: function (creep) {
         this.initializeMultiRoomMemory(creep);
 
-        // Check if multi-room is globally enabled
-        if (!MULTI_ROOM_CONFIG.enabled || !creep.memory.multiRoom?.enabled) {
+        // Check if multi-room is globally enabled (respects console toggle)
+        if (!isMultiRoomEnabled() || !creep.memory.multiRoom?.enabled) {
             return false;
         }
 
@@ -301,13 +337,21 @@ const roleHarvester: RoleHarvester = {
 
         // If already in target room, no transition needed
         if (currentRoom === targetRoom) {
+            // Clear transition timer if we made it
+            if (creep.memory.multiRoom?.roomTransitionStartTick) {
+                if (MULTI_ROOM_CONFIG.debugEnabled) {
+                    const duration = Game.time - creep.memory.multiRoom.roomTransitionStartTick;
+                    debugLog.debug(`${creep.name} reached ${targetRoom} in ${duration} ticks`);
+                }
+                delete creep.memory.multiRoom.roomTransitionStartTick;
+            }
             return true;
         }
 
-        // Check if room is still safe and accessible
-        if (!isRoomSafe(targetRoom) || !isRoomAccessible(currentRoom, targetRoom)) {
+        // Real-time safety check before committing to transition
+        if (!checkRoomSafetyBeforeEntry(targetRoom) || !isRoomAccessible(currentRoom, targetRoom)) {
             if (MULTI_ROOM_CONFIG.debugEnabled) {
-                debugLog.debug(`${creep.name} cannot access ${targetRoom} - resetting multi-room state`);
+                debugLog.warn(`${creep.name} cannot access ${targetRoom} (safety/accessibility failed)`);
             }
             this.resetMultiRoomState(creep);
             return false;
@@ -317,16 +361,23 @@ const roleHarvester: RoleHarvester = {
         if (creep.memory.multiRoom?.roomTransitionStartTick) {
             const transitionTime = Game.time - creep.memory.multiRoom.roomTransitionStartTick;
             if (transitionTime > MULTI_ROOM_CONFIG.roomTransitionTimeout) {
-                if (MULTI_ROOM_CONFIG.debugEnabled) {
-                    debugLog.debug(`${creep.name} room transition timeout - resetting`);
-                }
+                debugLog.warn(
+                    `${creep.name} room transition TIMEOUT: ${currentRoom} → ${targetRoom} ` +
+                    `(${transitionTime}/${MULTI_ROOM_CONFIG.roomTransitionTimeout} ticks)`
+                );
                 this.resetMultiRoomState(creep);
                 return false;
+            } else if (MULTI_ROOM_CONFIG.debugEnabled && transitionTime % 20 === 0) {
+                // Log progress every 20 ticks
+                debugLog.debug(`${creep.name} transitioning: ${currentRoom} → ${targetRoom} (${transitionTime}t)`);
             }
         } else {
             // Start transition timer
             if (creep.memory.multiRoom) {
                 creep.memory.multiRoom.roomTransitionStartTick = Game.time;
+                if (MULTI_ROOM_CONFIG.debugEnabled) {
+                    debugLog.info(`${creep.name} starting room transition: ${currentRoom} → ${targetRoom}`);
+                }
             }
         }
 

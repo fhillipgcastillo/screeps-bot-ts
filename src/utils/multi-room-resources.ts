@@ -8,6 +8,7 @@
 import { MULTI_ROOM_CONFIG, RoomType } from '../config/multi-room.config';
 import { isRoomSafe, isRoomAccessible, getRoomResourceValue } from './room-safety';
 import { debugLog } from './Logger';
+import { scoreSourceProfitability } from './sourceProfiler';
 
 // Import types from room-safety.ts to avoid circular imports
 type MultiRoomSource = {
@@ -139,6 +140,17 @@ export function prioritizeSourcesByDistance(sources: MultiRoomSource[], homeRoom
  */
 export function filterSafeRoomSources(sources: MultiRoomSource[]): MultiRoomSource[] {
   return sources.filter(source => source.safetyStatus && source.accessibility);
+}
+
+/**
+ * Filters out depleted sources below migration threshold
+ * @param sources - Array of MultiRoomSource objects to filter
+ * @returns Filtered array excluding sources below MIN_SOURCE_ENERGY_FOR_MIGRATION
+ */
+export function filterDepletedSources(sources: MultiRoomSource[]): MultiRoomSource[] {
+  return sources.filter(source =>
+    source.source.energy >= MULTI_ROOM_CONFIG.minSourceEnergyForMigration
+  );
 }
 
 // ============================================================================

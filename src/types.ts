@@ -104,6 +104,7 @@ export interface HarvesterMemory extends BaseCreepMemory {
         roomTransitionStartTick?: number;
         failureCount: number;
         lastMultiRoomAttempt?: number;
+        lastProfitabilityCheck?: number;
     };
 }
 
