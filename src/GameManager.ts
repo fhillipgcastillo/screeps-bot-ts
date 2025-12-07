@@ -92,6 +92,49 @@ export class GameManager {
         logger.warn(`Multi-room CPU usage high: ${metrics.cpuUsage.toFixed(2)} (limit: ${MULTI_ROOM_CONFIG.maxCpuUsage})`);
       }
     }
+
+    // Periodically update room discovery list
+    if (MULTI_ROOM_CONFIG.enabled && Game.time % 100 === 0) {
+      this.updateRoomDiscoveryList();
+    }
+  }
+
+  /**
+   * Discover adjacent rooms from claimed rooms and update Memory.rooms
+   */
+  private updateRoomDiscoveryList(): void {
+    try {
+      if (!Memory.rooms) Memory.rooms = {} as any;
+
+      // Start from claimed rooms (if none, use home rooms)
+      const claimedRooms = Object.keys(Memory.rooms).filter(r => Memory.rooms[r].claimed);
+      const sourceRooms = claimedRooms.length > 0 ? claimedRooms : Object.keys(Game.rooms);
+
+      for (const baseRoom of sourceRooms) {
+        const exits = Game.map.describeExits(baseRoom) as Record<string, string> | null;
+        if (exits) {
+          const exitKeys = Object.keys(exits);
+          for (const dir of exitKeys) {
+            const adj = exits[dir];
+            if (!Memory.rooms[adj]) {
+              Memory.rooms[adj] = { discovered: true, discoveredAt: Game.time, discoveredFrom: baseRoom } as any;
+            }
+          }
+        }
+      }
+
+      // Re-enable rooms marked unsafe after TTL
+      for (const roomName in Memory.rooms) {
+        const data = Memory.rooms[roomName] as any;
+        if (data.unsafe && data.unsafeUntil && Game.time > data.unsafeUntil) {
+          data.unsafe = false;
+          data.unsafeReason = undefined;
+          if (MULTI_ROOM_CONFIG.debugEnabled) debugLog.debug(`Re-enabled evaluation for ${roomName}`);
+        }
+      }
+    } catch (e) {
+      logger.error('updateRoomDiscoveryList error:', e);
+    }
   }
   handleSafeMode(spawn: StructureSpawn) {
     if (spawn.room?.controller) {

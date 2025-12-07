@@ -271,6 +271,27 @@ export const MULTI_ROOM_CONFIG = {
   debugEnabled: ENABLE_MULTI_ROOM_DEBUG,
   visualsEnabled: ENABLE_MULTI_ROOM_VISUALS,
   statsInterval: STATS_LOGGING_INTERVAL
+  ,
+  // Claiming configuration
+  claiming: {
+    enabled: true,
+    criteria: {
+      minSafetyScore: 50,
+      maxHostileCreeps: 0,
+      maxHostileStructures: 1,
+      maxEnergyDecayRate: 0.8,
+      minSourceCount: 1,
+      minAverageSourceEnergy: 500,
+    },
+    levelCriteria: {
+      1: { minSafetyScore: 60, maxHostileCreeps: 0, maxHostileStructures: 0 },
+      2: { minSafetyScore: 50, maxHostileCreeps: 0, maxHostileStructures: 1 },
+      3: { minSafetyScore: 40, maxHostileCreeps: 1, maxHostileStructures: 2 }
+    },
+    reevaluationInterval: 5000,
+    unsafeRoomTTL: 1000,
+    claimingMaxDistance: 3
+  }
 } as const;
 
 /**

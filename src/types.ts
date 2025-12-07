@@ -342,3 +342,53 @@ export function getCreepCountsByRole(): Record<CreepRole, number> {
 export function getCreepsByRole<T extends CreepRole>(role: T): Creep[] {
     return _.filter(Game.creeps, (creep) => creep.memory.role === role);
 }
+
+// ============================================================================
+// ROOM CLAIMING MEMORY INTERFACES
+// ============================================================================
+
+/**
+ * Memory structure for tracking room claiming state
+ */
+export interface RoomClaimingMemory {
+    roomName: string;
+    claimed?: boolean;
+    claimedBy?: string;
+    claimTime?: number;
+    safetyScore?: number;
+    lastEvaluated?: number;
+    unsafe?: boolean;
+    unsafeUntil?: number;
+    unsafeReason?: string;
+    discovered?: boolean;
+    discoveredTime?: number;
+}
+
+// NOTE: We intentionally do not declare `Memory.rooms` here to avoid
+// conflicting modifiers with other Memory augmentations in the codebase.
+// Room-level claiming state is attached to `RoomMemory` instead.
+
+// Extend Screeps' RoomMemory to include claiming state used by our utilities
+declare global {
+    interface RoomMemory {
+        // Whether this room has been marked claimed by our bot
+        claimed?: boolean;
+        // Which of our rooms claimed this room
+        claimedBy?: string;
+        // Game.time when the room was claimed
+        claimedAt?: number;
+
+        // Safety and evaluation metadata
+        safetyScore?: number;
+        lastEvaluated?: number;
+        unsafe?: boolean;
+        unsafeUntil?: number;
+        unsafeReason?: string;
+
+        // Discovery metadata
+        discovered?: boolean;
+        discoveredTime?: number;
+        lastHostileSeen: number;
+    }
+}
+

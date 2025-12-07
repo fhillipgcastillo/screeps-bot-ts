@@ -43,7 +43,15 @@ import {
   enableMultiRoom,
   disableMultiRoom,
   getMultiRoomStatus,
-  resetMultiRoomCache
+  resetMultiRoomCache,
+  // Room claiming console commands
+  claimRoomCmd,
+  getClaimableRooms,
+  getClaimedRoomsCmd,
+  getDiscoveredRoomsCmd,
+  getRoomStatus,
+  markRoomUnsafeCmd,
+  debugRoomState
 } from "./utils/consoleCommands";
 
 import {
@@ -100,7 +108,15 @@ export {
   enableMultiRoom,
   disableMultiRoom,
   getMultiRoomStatus,
-  resetMultiRoomCache
+  resetMultiRoomCache,
+  // Room claiming commands
+  claimRoomCmd,
+  getClaimableRooms,
+  getClaimedRoomsCmd,
+  getDiscoveredRoomsCmd,
+  getRoomStatus,
+  markRoomUnsafeCmd,
+  debugRoomState
 };
 
 // Export debug functions for external use
@@ -167,4 +183,12 @@ global.exportMultiRoomStats = exportMultiRoomStats;
 global.clearPerformanceHistory = clearPerformanceHistory;
 global.clearResourceCache = clearResourceCache;
 global.multiRoomConfig = MULTI_ROOM_CONFIG;
+// Room claiming globals
+global.claimRoom = claimRoomCmd;
+global.getClaimableRooms = getClaimableRooms;
+global.getClaimedRooms = getClaimedRoomsCmd;
+global.getDiscoveredRooms = getDiscoveredRoomsCmd;
+global.getRoomStatus = getRoomStatus;
+global.markRoomUnsafe = markRoomUnsafeCmd;
+global.debugRoomState = debugRoomState;
 

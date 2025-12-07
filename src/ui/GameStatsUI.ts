@@ -202,6 +202,22 @@ export class GameStatsUI {
       // ignore if global.gm not available
     }
 
+    // Room claiming state summary (if Memory.rooms exists)
+    try {
+      if ((Memory as any).rooms) {
+        const rooms = (Memory as any).rooms;
+        const claimed = Object.keys(rooms).filter(r => rooms[r].claimed).length;
+        const discovered = Object.keys(rooms).filter(r => rooms[r].discovered && !rooms[r].claimed && !rooms[r].unsafe).length;
+        const unsafe = Object.keys(rooms).filter(r => rooms[r].unsafe).length;
+
+        const roomLine = opts.colorize ? `<span style='color:#aaffaa'>Rooms - Claimed: ${claimed}, Discovered: ${discovered}, Unsafe: ${unsafe}</span>` : `Rooms - Claimed: ${claimed}, Discovered: ${discovered}, Unsafe: ${unsafe}`;
+        lines.push(roomLine);
+        lines.push('');
+      }
+    } catch (e) {
+      // ignore
+    }
+
     // Creep summary
     lines.push(this.displayCreepStats({ ...opts, showHeader: false, compact: true }));
     lines.push(''); // Empty line

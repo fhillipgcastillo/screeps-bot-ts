@@ -5,6 +5,7 @@ import { isRoomSafe, isRoomAccessible, checkRoomSafetyBeforeEntry } from './util
 import { debugLog } from './utils/Logger';
 import { shouldMigrateToNewSource, scoreSourceProfitability } from './utils/sourceProfiler';
 import { isMultiRoomEnabled } from './utils/consoleCommands';
+import { shouldClaimRoom, claimRoom } from './utils/roomClaiming';
 
 type RoleHarvester = {
     run: (creep: Creep) => void,
@@ -314,6 +315,23 @@ const roleHarvester: RoleHarvester = {
                 creep.memory.multiRoom.targetRoom = targetSourceInfo.roomName;
                 creep.memory.multiRoom.isMultiRoom = targetSourceInfo.roomName !== homeRoom;
                 creep.memory.multiRoom.lastMultiRoomAttempt = Game.time;
+            }
+
+            // Evaluate claiming the target room if configured
+            const claimingConfig = (MULTI_ROOM_CONFIG as any).claiming;
+            if (claimingConfig && claimingConfig.enabled) {
+                const criteria = claimingConfig.criteria || {
+                    minSafetyScore: 50,
+                    maxHostileCreeps: 0,
+                    maxHostileStructures: 1,
+                    minSourceCount: 1,
+                    minAverageSourceEnergy: 500,
+                };
+                const decision = shouldClaimRoom(targetSourceInfo.roomName, criteria, homeRoom);
+                if (decision.canClaim) {
+                    claimRoom(targetSourceInfo.roomName, homeRoom);
+                    if (MULTI_ROOM_CONFIG.debugEnabled) debugLog.info(`${creep.name} claimed room ${targetSourceInfo.roomName}`);
+                }
             }
 
             if (MULTI_ROOM_CONFIG.debugEnabled) {

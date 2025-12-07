@@ -9,6 +9,7 @@ import { MULTI_ROOM_CONFIG } from '../config/multi-room.config';
 import { debugLog } from './Logger';
 import { getResourceCacheStats, clearResourceCache } from './multi-room-resources';
 import { cleanupSourceProfitabilityCache, clearSourceProfitabilityCache } from './sourceProfiler';
+import { claimRoom, getClaimedRooms, getDiscoveredRooms, getRoomState, markRoomUnsafe, shouldClaimRoom } from './roomClaiming';
 
 // ============================================================================
 // TYPES AND MEMORY INTERFACE
@@ -27,6 +28,14 @@ declare global {
       disableMultiRoom: () => void;
       getMultiRoomStatus: () => void;
       resetMultiRoomCache: () => void;
+      // Room claiming
+      claimRoom: (roomName: string) => string;
+      getClaimableRooms: () => string[];
+      getClaimedRooms: () => string[];
+      getDiscoveredRooms: () => string[];
+      getRoomStatus: () => string;
+      markRoomUnsafe: (roomName: string, reason?: string) => string;
+      debugRoomState: (roomName?: string) => string;
     }
   }
 }
@@ -174,6 +183,57 @@ export function resetMultiRoomCache(): void {
   debugLog.info('Multi-room caches reset via console command');
 }
 
+/**
+ * Manually claim a room if it meets criteria
+ */
+export function claimRoomCmd(roomName: string): string {
+  if (!roomName) return 'Usage: claimRoom(roomName)';
+  const homeRoom = Object.keys(Game.rooms).find(r => Game.rooms[r].controller?.my);
+  if (!homeRoom) return 'Error: no home room found';
+
+  const claimingConfig = (MULTI_ROOM_CONFIG as any).claiming || {};
+  const criteria = claimingConfig.criteria || {};
+  const decision = shouldClaimRoom(roomName, criteria, homeRoom);
+  if (!decision.canClaim) return `Cannot claim ${roomName}: ${decision.reasons.join(', ')}`;
+
+  claimRoom(roomName, homeRoom);
+  return `Claimed ${roomName} for ${homeRoom}`;
+}
+
+export function getClaimableRooms(): string[] {
+  const homeRoom = Object.keys(Game.rooms).find(r => Game.rooms[r].controller?.my);
+  if (!homeRoom) return [];
+  const claimingConfig = (MULTI_ROOM_CONFIG as any).claiming || {};
+  const criteria = claimingConfig.criteria || {};
+  const discovered = getDiscoveredRooms();
+  return discovered.filter(room => shouldClaimRoom(room, criteria, homeRoom).canClaim);
+}
+
+export function getClaimedRoomsCmd(): string[] {
+  return getClaimedRooms();
+}
+
+export function getDiscoveredRoomsCmd(): string[] {
+  return getDiscoveredRooms();
+}
+
+export function getRoomStatus(): string {
+  const state = getRoomState();
+  return `Room Status:\n  Claimed: ${state.claimed.join(', ') || 'none'}\n  Discovered: ${state.discovered.join(', ') || 'none'}\n  Unsafe: ${state.unsafe.join(', ') || 'none'}`;
+}
+
+export function markRoomUnsafeCmd(roomName: string, reason: string = 'manual'): string {
+  if (!roomName) return 'Usage: markRoomUnsafe(roomName, reason)';
+  markRoomUnsafe(roomName, reason);
+  return `Marked ${roomName} as unsafe`;
+}
+
+export function debugRoomState(roomName?: string): string {
+  if (!Memory.rooms) return 'No room data tracked';
+  if (roomName) return JSON.stringify(Memory.rooms[roomName] || {}, null, 2);
+  return JSON.stringify(Memory.rooms, null, 2);
+}
+
 // ============================================================================
 // GLOBAL EXPORT
 // ============================================================================
@@ -188,6 +248,14 @@ export function initializeConsoleCommands(): void {
   global.disableMultiRoom = disableMultiRoom;
   global.getMultiRoomStatus = getMultiRoomStatus;
   global.resetMultiRoomCache = resetMultiRoomCache;
+  // Room claiming commands
+  global.claimRoom = claimRoomCmd;
+  global.getClaimableRooms = getClaimableRooms;
+  global.getClaimedRooms = getClaimedRoomsCmd;
+  global.getDiscoveredRooms = getDiscoveredRoomsCmd;
+  global.getRoomStatus = getRoomStatus;
+  global.markRoomUnsafe = markRoomUnsafeCmd;
+  global.debugRoomState = debugRoomState;
 
   debugLog.info('Console commands initialized: toggleMultiRoom, enableMultiRoom, disableMultiRoom, getMultiRoomStatus, resetMultiRoomCache');
 }
