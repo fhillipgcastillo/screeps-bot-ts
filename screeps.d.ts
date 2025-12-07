@@ -104,6 +104,12 @@ declare global {
       toggleDebug: () => void;
       isDebugEnabled: () => boolean;
 
+      // Spawn Pause/Resume Functions - accessible from game console
+      pauseSpawning: () => void;
+      resumeSpawning: () => void;
+      toggleSpawning: () => void;
+      isSpawningPaused: () => boolean;
+
       // Multi-Room Debugging Functions - accessible from game console
       debugMultiRoom: () => void;
       runMultiRoomDiagnostics: () => boolean;

@@ -49,6 +49,7 @@ export class SpawnManager {
   private static readonly MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED = 2;
 
   private autoSpawnEnabled: boolean = true;
+  private spawnPaused: boolean = false;
 
   /**
    * Constructor - initialize memory helpers and container caching systems
@@ -94,7 +95,7 @@ export class SpawnManager {
    * Main entry point for spawn management - processes all spawns in the game
    */
   public run(): void {
-    if (!this.autoSpawnEnabled) {
+    if (!this.autoSpawnEnabled || this.spawnPaused) {
       return;
     }
 
@@ -114,6 +115,38 @@ export class SpawnManager {
         this.processSpawn(spawn, globalCreepCounts);
       }
     }
+  }
+
+  /**
+   * Pause spawning (active creeps continue executing their tasks)
+   */
+  public pauseSpawning(): void {
+    this.spawnPaused = true;
+    console.log('Spawning paused - active creeps continue');
+  }
+
+  /**
+   * Resume spawning
+   */
+  public resumeSpawning(): void {
+    this.spawnPaused = false;
+    console.log('Spawning resumed');
+  }
+
+  /**
+   * Toggle spawning pause state
+   */
+  public toggleSpawning(): boolean {
+    this.spawnPaused = !this.spawnPaused;
+    console.log(`Spawning ${this.spawnPaused ? 'paused' : 'resumed'}`);
+    return this.spawnPaused;
+  }
+
+  /**
+   * Check if spawning is currently paused
+   */
+  public isSpawningPaused(): boolean {
+    return this.spawnPaused;
   }
 
   /**

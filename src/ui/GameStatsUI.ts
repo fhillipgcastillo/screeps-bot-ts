@@ -188,6 +188,20 @@ export class GameStatsUI {
       lines.push(opts.colorize ? `<span style='color:#00ffff'>${header}</span>` : header);
     }
 
+    // Spawning pause state (spawn pause affects only spawning; creeps continue)
+    try {
+      const gm = (global as any).gm;
+      const spawnState = gm && typeof gm.isSpawningPaused === 'function' && gm.isSpawningPaused()
+        ? '⏸️ PAUSED (creeps active)'
+        : '▶️ ACTIVE';
+
+      const spawnLine = opts.colorize ? `<span style='color:#ffcc00'>Spawning: ${spawnState}</span>` : `Spawning: ${spawnState}`;
+      lines.push(spawnLine);
+      lines.push('');
+    } catch (e) {
+      // ignore if global.gm not available
+    }
+
     // Creep summary
     lines.push(this.displayCreepStats({ ...opts, showHeader: false, compact: true }));
     lines.push(''); // Empty line

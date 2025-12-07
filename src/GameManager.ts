@@ -57,10 +57,7 @@ export class GameManager {
    * Main game loop method that is called every tick.
    */
   public tick(): void {
-    // Check if game is paused - return early if so
-    if (this.isPaused) {
-      return;
-    }
+    // Note: spawning pause is handled by SpawnManager; creeps should continue executing
 
     logger.debug(`Current game tick is ${Game.time}`);
     this.syncActiveCreeps();
@@ -68,7 +65,7 @@ export class GameManager {
     this.cleanUpMemory();
     // Game.map.visual.text("Target💥", new RoomPosition(10,16,Object.keys(Game.rooms)[0]), {color: '#FF0000', fontSize: 19});
 
-    // auto spawn harvesters
+    // auto spawn harvesters (SpawnManager respects spawn-pause state)
     this.spawnManager.run();
 
     for (let name in Object.values(Game.spawns)) {
@@ -254,27 +251,30 @@ export class GameManager {
    * Pause the game loop - stops all tick execution
    */
   public pauseGame(): void {
-    this.isPaused = true;
-    logger.force("🛑 Game paused - bot operations stopped");
+    // Backwards-compatible wrapper: pause spawning only
+    this.spawnManager.pauseSpawning();
+    logger.force("🛑 Spawning paused - active creeps continue");
   }
 
   /**
    * Resume the game loop - allows tick execution to continue
    */
   public resumeGame(): void {
-    this.isPaused = false;
-    logger.force("▶️ Game resumed - bot operations continuing");
+    // Backwards-compatible wrapper: resume spawning
+    this.spawnManager.resumeSpawning();
+    logger.force("▶️ Spawning resumed - bot operations continuing");
   }
 
   /**
    * Toggle the pause state of the game
    */
   public togglePause(): void {
-    this.isPaused = !this.isPaused;
-    if (this.isPaused) {
-      logger.force("🛑 Game paused - bot operations stopped");
+    // Toggle spawning pause state
+    const paused = this.spawnManager.toggleSpawning();
+    if (paused) {
+      logger.force("🛑 Spawning paused - active creeps continue");
     } else {
-      logger.force("▶️ Game resumed - bot operations continuing");
+      logger.force("▶️ Spawning resumed - bot operations continuing");
     }
   }
 
@@ -314,7 +314,8 @@ export class GameManager {
    * Check if the game is currently paused
    */
   public isGamePaused(): boolean {
-    return this.isPaused;
+    // Backwards-compatible: report spawning pause state
+    return this.spawnManager.isSpawningPaused();
   }
 
   // ============================================================================

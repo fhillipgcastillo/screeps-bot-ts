@@ -109,6 +109,12 @@ export const disableDebug = () => gm.disableDebug();
 export const toggleDebug = () => gm.toggleDebug();
 export const isDebugEnabled = () => gm.isDebugEnabled();
 
+// Spawn pause/resume (spawning only - active creeps continue)
+export const pauseSpawning = () => gm.pauseGame();
+export const resumeSpawning = () => gm.resumeGame();
+export const toggleSpawning = () => gm.togglePause();
+export const isSpawningPaused = () => gm.isGamePaused();
+
 global.gm = gm;
 
 // Initialize console commands for multi-room control
@@ -119,6 +125,12 @@ global.enableDebug = () => gm.enableDebug();
 global.disableDebug = () => gm.disableDebug();
 global.toggleDebug = () => gm.toggleDebug();
 global.isDebugEnabled = () => gm.isDebugEnabled();
+
+// Assign spawning pause/resume functions to global for console access
+global.pauseSpawning = () => gm.pauseGame();
+global.resumeSpawning = () => gm.resumeGame();
+global.toggleSpawning = () => gm.togglePause();
+global.isSpawningPaused = () => gm.isGamePaused();
 
 // Assign manual spawner functions to global for console access
 global.spawnCreep = spawnCreep;
