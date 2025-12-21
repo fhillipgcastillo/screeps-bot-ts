@@ -359,7 +359,6 @@ export function canSafelySpawn(
 ): boolean {
   const energyReserve = getEnergyReserveThreshold(controllerLevel);
   const availableEnergy = spawn.store[RESOURCE_ENERGY];
-  console.log('Available Energy:', availableEnergy, 'Template Cost:', template.energyCost, 'Energy Reserve:', energyReserve);
   return availableEnergy >= (template.energyCost + energyReserve);
 }
 

@@ -240,37 +240,75 @@ const haulerHandler: RoleHauler = {
     // Use cached containers to avoid repeated FIND operations
     const cachedContainers = getCachedContainers(creep.room.name);
 
-    const storageAreFull = this.spawn.store.getUsedCapacity(RESOURCE_ENERGY) / this.spawn.store.getCapacity(RESOURCE_ENERGY);
+    // Check if spawn is completely full (100%)
+    const spawnIsFull = this.spawn.store.getFreeCapacity(RESOURCE_ENERGY) === 0;
+
     const containers: StructureContainer[] = _.sortByOrder(
       cachedContainers.filter(c => c.store.getFreeCapacity(RESOURCE_ENERGY) > 0),
       (c) => c.store.getFreeCapacity(RESOURCE_ENERGY),
       'asc'
     );
 
+    // Find all extensions in the room to check total count
+    const allExtensions = creep.room.find(FIND_STRUCTURES, {
+      filter: (structure) => structure.structureType == STRUCTURE_EXTENSION
+    });
+
+    // Find extensions with free capacity
     const emptyExtensions = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
         return structure.structureType == STRUCTURE_EXTENSION &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
       }
     });
-    const structures = creep.room.find(FIND_STRUCTURES, {
+
+    // Find spawns with free capacity
+    const emptySpawns = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
-        return (
-          structure.structureType == STRUCTURE_SPAWN ||
-          structure.structureType == STRUCTURE_TOWER) &&
+        return structure.structureType == STRUCTURE_SPAWN &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
       }
     });
 
-    if (storageAreFull >= 0.9 && containers.length > 0) {
-      targets = containers;
-    } else if (emptyExtensions.length > 0) {
+    // Find towers with free capacity
+    const emptyTowers = creep.room.find(FIND_STRUCTURES, {
+      filter: (structure) => {
+        return structure.structureType == STRUCTURE_TOWER &&
+          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+      }
+    });
+
+    // Find storage structures with free capacity
+    const emptyStorage = creep.room.find(FIND_STRUCTURES, {
+      filter: (structure) => {
+        return structure.structureType == STRUCTURE_STORAGE &&
+          structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
+      }
+    });
+
+    // Priority logic:
+    // 1. Extensions (if room has > 2 extensions total)
+    // 2. Spawns
+    // 3. Towers
+    // 4. Storage
+    // 5. Containers (only when spawn is 100% full)
+
+    if (allExtensions.length > 2 && emptyExtensions.length > 0) {
       targets = emptyExtensions;
-    } else {
-      targets = structures;
+    } else if (emptySpawns.length > 0) {
+      targets = emptySpawns;
+    } else if (emptyTowers.length > 0) {
+      targets = emptyTowers;
+    } else if (emptyStorage.length > 0) {
+      targets = emptyStorage;
+    } else if (spawnIsFull && containers.length > 0) {
+      targets = containers;
+    } else if (allExtensions.length <= 2 && emptyExtensions.length > 0) {
+      // Fallback: if 2 or fewer extensions, still fill them
+      targets = emptyExtensions;
     }
 
-    if (targets.length > 0) {
+    if (targets && targets.length > 0) {
       let target = creep.pos.findClosestByRange(targets);
       if (target) {
         let transferAction = target && creep.transfer(target, RESOURCE_ENERGY);

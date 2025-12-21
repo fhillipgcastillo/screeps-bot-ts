@@ -14,6 +14,14 @@ Download the latest source [here](https://github.com/screepers/screeps-typescrip
 
 Open the folder in your terminal and run your package manager to install the required packages and TypeScript declaration files:
 
+---
+
+### Recommendation
+install `nvm` this wa it's easiert to handle this old node version whih is deprecated from the dev containers. Alternatively we can use our `dotfiles` project to install it using the bootstrap script.
+
+---
+
+
 ```bash
 # npm
 npm install
