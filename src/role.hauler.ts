@@ -240,9 +240,6 @@ const haulerHandler: RoleHauler = {
     // Use cached containers to avoid repeated FIND operations
     const cachedContainers = getCachedContainers(creep.room.name);
 
-    // Check if spawn is completely full (100%)
-    const spawnIsFull = this.spawn.store.getFreeCapacity(RESOURCE_ENERGY) === 0;
-
     const containers: StructureContainer[] = _.sortByOrder(
       cachedContainers.filter(c => c.store.getFreeCapacity(RESOURCE_ENERGY) > 0),
       (c) => c.store.getFreeCapacity(RESOURCE_ENERGY),
@@ -286,12 +283,27 @@ const haulerHandler: RoleHauler = {
       }
     });
 
+    // Find all spawns in the room
+    const allSpawns = creep.room.find(FIND_MY_SPAWNS);
+
+    // Check if all spawns are at full capacity
+    const allSpawnsFull = allSpawns.length > 0 && allSpawns.every(spawn => spawn.store.getFreeCapacity(RESOURCE_ENERGY) === 0);
+
+    // Check if all extensions are at full capacity
+    const allExtensionsFull = allExtensions.length > 0 && allExtensions.every(ext => {
+      const structure = ext as StructureExtension;
+      return structure.store.getFreeCapacity(RESOURCE_ENERGY) === 0;
+    });
+
+    // Combined check: spawns and extensions are full
+    const allSpawnsAndExtensionsFull = allSpawnsFull && allExtensionsFull;
+
     // Priority logic:
     // 1. Extensions (if room has > 2 extensions total)
     // 2. Spawns
     // 3. Towers
     // 4. Storage
-    // 5. Containers (only when spawn is 100% full)
+    // 5. Containers (when spawns and extensions are ALL full)
 
     if (allExtensions.length > 2 && emptyExtensions.length > 0) {
       targets = emptyExtensions;
@@ -301,7 +313,7 @@ const haulerHandler: RoleHauler = {
       targets = emptyTowers;
     } else if (emptyStorage.length > 0) {
       targets = emptyStorage;
-    } else if (spawnIsFull && containers.length > 0) {
+    } else if (allSpawnsAndExtensionsFull && containers.length > 0) {
       targets = containers;
     } else if (allExtensions.length <= 2 && emptyExtensions.length > 0) {
       // Fallback: if 2 or fewer extensions, still fill them
