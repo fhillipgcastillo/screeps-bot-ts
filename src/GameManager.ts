@@ -4,7 +4,7 @@ import roleHarvester from "./role.harvester_stationary";
 import roleHauler from "./role.hauler";
 import roleUpgrader from "./role.upgrader";
 import roleBuilder from "./role.builder";
-import roleExplorer from "role.explorer";
+import { runExplorer } from "./role.explorer";
 import roleDefender from "role.defender";
 import roleRanger from "role.ranger";
 import { CreepRoleEnum, isValidCreepRole } from "./types";
@@ -192,7 +192,7 @@ export class GameManager {
         roleRanger.run(creep);
         break;
       case CreepRoleEnum.EXPLORER:
-        roleExplorer.run(creep, spawn);
+        runExplorer(creep);
         break;
       default:
         // This should never happen due to the type guard above, but keeping for safety

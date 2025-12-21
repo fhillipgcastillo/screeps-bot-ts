@@ -307,6 +307,7 @@ export function getTemplatesForRole(role: string): SpawnTemplate[] {
  * @param role - Creep role to spawn
  * @param controllerLevel - Current room controller level
  * @param isRecoveryMode - If true, prioritize emergency spawning
+ * @param forceEmergency - If true, ONLY return emergency tier (for creep count < 2)
  * @returns Best available template or undefined if insufficient energy
  */
 export function selectBestTemplate(
@@ -314,18 +315,20 @@ export function selectBestTemplate(
   role: string,
   controllerLevel: number,
   isRecoveryMode: boolean = false,
-  bypassReserves: boolean = false
+  forceEmergency: boolean = false
 ): SpawnTemplate | undefined {
   const templates = getTemplatesForRole(role);
   const energyReserve = getEnergyReserveThreshold(controllerLevel);
 
-  // Calculate available energy after reserve (unless bypassing reserves)
-  const usableEnergy = bypassReserves ? availableEnergy : availableEnergy - energyReserve;
+  // Calculate available energy after reserve
+  const usableEnergy = availableEnergy - energyReserve;
 
-  // In recovery mode, prioritize emergency template to spawn ASAP
-  if (isRecoveryMode) {
+  // CRITICAL: Force emergency tier when creep count < 2 (harvesters or haulers)
+  // This ensures small bodies (100-200 energy) for maximum spawn throughput
+  // Emergency spawning ignores energy reserves - spawns at 200 energy minimum
+  if (forceEmergency || isRecoveryMode) {
     const emergency = templates.find(t => t.tier === SpawnTier.EMERGENCY);
-    if (emergency && usableEnergy >= emergency.minEnergyRequired) {
+    if (emergency && availableEnergy >= emergency.minEnergyRequired) {
       return emergency;
     }
     return undefined;
@@ -346,6 +349,7 @@ export function selectBestTemplate(
 
 /**
  * Check if a spawn can safely spawn a creep without violating energy reserves
+ * EMERGENCY tier spawning bypasses energy reserves (spawns at 200 energy minimum)
  *
  * @param spawn - The spawn structure
  * @param template - The template to attempt
@@ -357,8 +361,15 @@ export function canSafelySpawn(
   template: SpawnTemplate,
   controllerLevel: number
 ): boolean {
-  const energyReserve = getEnergyReserveThreshold(controllerLevel);
   const availableEnergy = spawn.store[RESOURCE_ENERGY];
+
+  // Emergency tier bypasses energy reserves for fast recovery
+  if (template.tier === SpawnTier.EMERGENCY) {
+    return availableEnergy >= template.energyCost;
+  }
+
+  // Normal/Advanced tiers respect energy reserves
+  const energyReserve = getEnergyReserveThreshold(controllerLevel);
   return availableEnergy >= (template.energyCost + energyReserve);
 }
 
@@ -376,25 +387,34 @@ export function isInRecoveryMode(spawn: StructureSpawn, activeHarvesters: number
 }
 
 /**
- * Get the current spawn tier for a room based on its energy capacity and controller level
+ * Get the current spawn tier for a room based on creep count and energy capacity
+ * PRIORITY: Creep count is checked FIRST - emergency tier if harvesters < 2 OR haulers < 2
+ * This forces small bodies (100-200 energy) for fast recovery/spawn throughput
  *
  * @param room - The room to check
+ * @param harvesterCount - Current number of harvesters
+ * @param haulerCount - Current number of haulers
  * @returns The current SpawnTier enum value
  */
-export function getCurrentSpawnTier(room: Room): SpawnTier {
+export function getCurrentSpawnTier(room: Room, harvesterCount: number, haulerCount: number): SpawnTier {
+  // CRITICAL: Check creep count FIRST - emergency tier for fast recovery
+  // If we have less than 2 harvesters OR less than 2 haulers, force EMERGENCY tier
+  // This ensures small bodies (100-200 energy) for maximum spawn throughput
+  if (harvesterCount < 2 || haulerCount < 2) {
+    return SpawnTier.EMERGENCY;
+  }
+
+  // Only check energy capacity if we have minimum workforce (2+ harvesters AND 2+ haulers)
   const energyCapacity = room.energyCapacityAvailable;
   const controllerLevel = room.controller?.level || 0;
 
-  // Check against Harvester templates as the baseline for room capability
-  // We use the minEnergyRequired to determine if we can support that tier
-
-  // Check Advanced
+  // Check Advanced tier
   const advancedTemplate = HARVESTER_TEMPLATES.find(t => t.tier === SpawnTier.ADVANCED);
   if (advancedTemplate && energyCapacity >= advancedTemplate.minEnergyRequired && controllerLevel >= 2) {
     return SpawnTier.ADVANCED;
   }
 
-  // Check Normal
+  // Check Normal tier
   const normalTemplate = HARVESTER_TEMPLATES.find(t => t.tier === SpawnTier.NORMAL);
   if (normalTemplate && energyCapacity >= normalTemplate.minEnergyRequired) {
     return SpawnTier.NORMAL;
@@ -512,6 +532,7 @@ export function getCachedContainers(roomName: string): StructureContainer[] {
  * Get cached storage for a room (returns only valid, existing storage)
  *
  * @param roomName - Room to get storage from
+ */
 export function getCachedStorage(roomName: string): StructureStorage[] {
   if (!Memory.containers || !Memory.containers[roomName]) {
     initializeContainerCache(roomName);
@@ -530,8 +551,6 @@ export function getCachedStorage(roomName: string): StructureStorage[] {
     }
   }
 
-  return storages;
-}
   return storages;
 }
 

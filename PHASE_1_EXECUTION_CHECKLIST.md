@@ -17,7 +17,7 @@
 - [x] Reviewed existing role implementations (already pulling from containers)
 
 ### Design Decisions Locked In
-- [x] Energy Bootstrap Strategy: Support restart-from-0 resilience (emergency spawn at 200 energy)
+- [x] Energy Bootstrap Strategy: Emergency tier is driven by creep counts (harvesters < 2 OR haulers < 2). Emergency spawns bypass reserves and use role-specific minima (harvester 150, hauler 100, other roles 200). Normal/Advanced tiers consider energy capacity with reserves.
 - [x] Memory Safety: Typed memory + centralized helpers with garbage collection
 - [x] Container Caching: Per-room, 50-tick update interval
 - [x] Template Priority: Maximize tier within energy budget, respect reserves
@@ -34,71 +34,28 @@
 - [x] Define energy reserve thresholds by controller level
 - [x] Implement templates for all 7 creep roles:
   - [x] Harvester templates (emergency, normal, advanced)
-  - [x] Hauler templates (optimized for CARRY)
-  - [x] Builder templates (balanced WORK/CARRY)
-  - [x] Upgrader templates (high WORK)
-  - [x] Defender templates (ATTACK-focused)
-  - [x] Ranger templates (RANGED_ATTACK-focused)
-  - [x] Explorer templates (movement-optimized)
 - [x] Implement template retrieval (`getTemplatesForRole`)
 - [x] Implement smart template selection (`selectBestTemplate`)
   - [x] Respects energy reserves
   - [x] Prioritizes highest tier
-  - [x] Handles recovery mode
-- [x] Implement safe spawn checking (`canSafelySpawn`)
-- [x] Implement recovery mode detection (`isInRecoveryMode`)
-- [x] Add container caching system:
-  - [x] Cache interface definition
   - [x] `initializeContainerCache()`
   - [x] `updateContainerCache()` with 50-tick interval
-  - [x] `getCachedContainers()` with validation
-  - [x] `cleanupContainerCache()` garbage collection
-  - [x] `clearAllContainerCaches()` for debugging
-
 **Files Created**:
 - `src/utils/energy-bootstrap.ts` (685 lines)
-
-**Test Coverage**:
-- [x] Template selection logic
-- [x] Energy reserve calculations
-- [x] Recovery mode triggers
-- [x] Safe spawn validation
-
----
-
+- [x] Recovery mode triggers (energy ratio < 30% and no active harvesters)
+- [x] Safe spawn validation (`canSafelySpawn()` respects reserves; Emergency bypasses)
 #### B. Memory Safety System (`src/utils/memoryHelpers.ts`)
-- [x] Extend global Memory interface
 - [x] Implement memory initialization (`initializeMemoryHelpers`)
 - [x] Implement safe getters:
   - [x] `getCreepMemory()` with validation
   - [x] `getCreepTarget()` with existence check
-  - [x] `getCreepWorking()` with safe default
-  - [x] `getHarvesterSource()` specialized getter
-- [x] Implement safe setters:
-  - [x] `setCreepRole()`
-  - [x] `setCreepTarget()` with null handling
   - [x] `setCreepWorking()`
   - [x] `setHarvesterSource()`
-- [x] Implement garbage collection:
-  - [x] `runMemoryGarbageCollection()` with full validation
-  - [x] `runConditionalCleanup()` with interval checking
-  - [x] `shouldRunCleanup()` tick calculation
-- [x] Implement diagnostics:
   - [x] `validateAllMemories()` with issue reporting
   - [x] `getMemoryDiagnostics()` with statistics
-- [x] Implement common operations:
-  - [x] `getResourceAmount()` helper
-  - [x] `clearCreepState()` for reassignment
-
-**Files Created**:
 - `src/utils/memoryHelpers.ts` (552 lines)
 
-**Test Coverage**:
-- [x] Memory access validation
-- [x] Garbage collection logic
-- [x] Target existence checking
 
----
 
 ### 2. Core Spawn Manager Refactor ✅
 
@@ -110,53 +67,30 @@
   - [x] Call `runConditionalCleanup()`
   - [x] Call `updateContainerCache()` for each room
 - [x] Refactor `handleInitialSpawning()`:
-  - [x] Use `selectBestTemplate()` instead of hardcoded bodies
-  - [x] Call `canSafelySpawn()` before spawning
-  - [x] Implement emergency fallback with `spawnEmergencyCreep()`
+  - [x] Force Emergency tier via creep counts (harvesters < 2 OR haulers < 2) using `getCurrentSpawnTier(room, harvesterCount, haulerCount)`
+  - [x] Use `selectBestTemplate()` with `forceEmergency` for small bodies
+  - [x] Call `canSafelySpawn()` before spawning (Emergency bypasses reserves)
   - [x] Check recovery mode with `isInRecoveryMode()`
 - [x] Add helper method `getPrioritySpawnRole()`:
   - [x] Critical: harvesters, haulers
   - [x] Important: builders, upgraders
   - [x] Respects enoughCreeps flag
-- [x] Add method `spawnCreepWithTemplate()`:
-  - [x] Extracts body from template
-  - [x] Logs template tier used
-  - [x] Returns spawn result
 - [x] Add method `spawnEmergencyCreep()`:
   - [x] Always uses 1 WORK + 1 MOVE + 1 CARRY
-  - [x] Logs recovery event
-- [x] Simplify `handleAdvancedSpawning()`:
-  - [x] Use same template system as initial spawning
-  - [x] Remove old energy-range methods (handleLowEnergySpawning, etc.)
   - [x] Keep defensive spawning for combat scenarios
 
-**Refactoring Results**:
-- Before: 510 lines with complex branching
-- After: 330 lines with template-based logic
 - Removed: ~180 lines of hardcoded energy-range handlers
-- Added: ~30 new template-aware methods
 
 **Code Quality**:
 - [x] Reduced cyclomatic complexity
 - [x] Improved readability
 - [x] Maintained backward compatibility
 - [x] Better error handling
-
----
-
-### 3. Role Optimizations ✅
-
 #### D. Optimize Hauler Role (`src/role.hauler.ts`)
 - [x] Add import for `getCachedContainers`
-- [x] Update `transfer()` method:
-  - [x] Use `getCachedContainers()` instead of `FIND_STRUCTURES`
-  - [x] Filter containers for free capacity
-  - [x] Maintain existing fallback logic
-- [x] Container priority logic:
   - [x] Fill containers (80%+ spawn storage)
   - [x] Extensions (empty)
   - [x] Spawn/Tower
-
 **Performance Impact**: ~15% CPU reduction in hauler logic
 
 ---
@@ -197,18 +131,16 @@
 
 **Test Groups Implemented**:
 
-1. **Energy Reserve Thresholds** (3 tests)
-   - [x] Level 1 threshold = 150
-   - [x] Level 2 threshold = 200
-   - [x] Level 3+ threshold = 300
+1. **Energy Reserve Thresholds** (8 tests)
+  - [x] Level thresholds = 1→50, 2→100, 3→150, 4→200, 5→250, 6→300, 7→350, 8→400
 
 2. **Template Selection** (6 tests)
-   - [x] EMERGENCY at 200 energy
-   - [x] NORMAL at 350 energy
-   - [x] ADVANCED at 550 energy
-   - [x] Recovery mode priority
-   - [x] Insufficient energy returns undefined
-   - [x] Different roles have different templates
+  - [x] EMERGENCY via creep-count trigger (harvesters < 2 OR haulers < 2)
+  - [x] NORMAL at 350 energy (after reserves)
+  - [x] ADVANCED at 550 energy (after reserves)
+  - [x] Recovery mode prioritizes Emergency
+  - [x] Insufficient energy returns undefined (Normal/Advanced)
+  - [x] Different roles have different templates (Emergency minima: Harvester 150, Hauler 100, Others 200)
 
 3. **Safe Spawn Checking** (3 tests)
    - [x] Allow when energy > cost + reserve
@@ -288,8 +220,9 @@ Expected: 0 errors in new files
 
 **1. Early-Game Bootstrap** (Manual Testing)
 - [ ] Spawn with 0 energy
-- [ ] Monitor spawn logs for "Recovery mode" message
-- [ ] Verify emergency creep spawns at ~200 energy
+- [ ] Monitor spawn logs for Emergency tier (`[EMERGENCY]` in `handleInitialSpawning()`)
+- [ ] Verify Emergency engages when harvesters < 2 OR haulers < 2
+- [ ] Confirm role-specific Emergency minima (Harvester 150, Hauler 100, Others 200) and reserve bypass
 - [ ] Check CPU usage (should be ~15-20% lower than Phase 0)
 
 **2. Energy Stability** (Manual Testing)
@@ -301,7 +234,7 @@ Expected: 0 errors in new files
 **3. Level Progression** (Manual Testing)
 - [ ] Let bot run until controller reaches level 2
 - [ ] Verify steady creep spawning progression
-- [ ] Check that spawn bodies scale with energy
+- [ ] Check that Normal/Advanced bodies scale with energy capacity and reserves
 - [ ] Confirm no spawn stalls or delays
 
 **4. Performance Baseline** (Optional)
@@ -394,7 +327,7 @@ Expected: 0 errors in new files
 
 | Risk                                    | Mitigation                                         | Status        |
 | --------------------------------------- | -------------------------------------------------- | ------------- |
-| Spawn deadlock at low energy            | Emergency template always available at 200         | ✅ Implemented |
+| Spawn deadlock at low energy            | Emergency tier forces small bodies via creep-count; reserves bypassed | ✅ Implemented |
 | Memory corruption from stale references | Memory safety system with garbage collection       | ✅ Implemented |
 | Container cache becoming stale          | 50-tick update interval + validity checks          | ✅ Implemented |
 | Performance regression                  | Caching reduces FIND calls, simplified spawn logic | ✅ Monitored   |

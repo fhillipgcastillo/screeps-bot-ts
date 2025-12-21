@@ -166,6 +166,13 @@ export interface RangerMemory extends BaseCreepMemory {
 export interface ExplorerMemory extends BaseCreepMemory {
     role: "explorer";
     nextRole?: CreepRole;
+
+    // Exploration state
+    targetRoom?: string;           // Room currently being explored
+    homeRoom: string;              // Home room to return to
+    scannedRooms?: string[];       // List of rooms already scanned
+    isReturning?: boolean;         // Whether explorer is returning home
+    explorationComplete?: boolean; // Whether all adjacent rooms scanned
 }
 
 /**
@@ -368,6 +375,31 @@ export interface RoomClaimingMemory {
 // conflicting modifiers with other Memory augmentations in the codebase.
 // Room-level claiming state is attached to `RoomMemory` instead.
 
+/**
+ * Safety status for explored rooms
+ */
+export enum RoomSafetyStatus {
+    UNKNOWN = "UNKNOWN",       // Not yet explored
+    SAFE = "SAFE",             // No hostile attackers detected
+    HOSTILE = "HOSTILE",       // Hostile attackers present
+    EXPIRED = "EXPIRED"        // Safety data expired, needs re-scan
+}
+
+/**
+ * Memory structure for tracking room exploration results
+ */
+export interface RoomExplorationData {
+    roomName: string;
+    safetyStatus: RoomSafetyStatus;
+    lastScanned: number;               // Game.time of last scan
+    hostileCount: number;              // Number of hostile creeps with ATTACK/RANGED_ATTACK
+    sourceCount?: number;              // Number of sources found
+    controllerLevel?: number;          // Controller level if present
+    controllerOwner?: string;          // Controller owner if present
+    explorerName?: string;             // Name of explorer that scanned this room
+    enabledForRemoteHarvest?: boolean; // Whether remote harvesting is enabled
+}
+
 // Extend Screeps' RoomMemory to include claiming state used by our utilities
 declare global {
     interface RoomMemory {
@@ -389,6 +421,12 @@ declare global {
         discovered?: boolean;
         discoveredTime?: number;
         lastHostileSeen: number;
+    }
+
+    interface Memory {
+        exploration?: {
+            [roomName: string]: RoomExplorationData;
+        };
     }
 }
 

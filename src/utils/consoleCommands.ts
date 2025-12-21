@@ -10,6 +10,7 @@ import { debugLog } from './Logger';
 import { getResourceCacheStats, clearResourceCache } from './multi-room-resources';
 import { cleanupSourceProfitabilityCache, clearSourceProfitabilityCache } from './sourceProfiler';
 import { claimRoom, getClaimedRooms, getDiscoveredRooms, getRoomState, markRoomUnsafe, shouldClaimRoom } from './roomClaiming';
+import { RoomSafetyStatus, RoomExplorationData } from '../types';
 
 // ============================================================================
 // TYPES AND MEMORY INTERFACE
@@ -36,6 +37,11 @@ declare global {
       getRoomStatus: () => string;
       markRoomUnsafe: (roomName: string, reason?: string) => string;
       debugRoomState: (roomName?: string) => string;
+      // Exploration
+      getExploredRooms: () => void;
+      enableRemoteHarvest: (roomName: string) => void;
+      disableRemoteHarvest: (roomName: string) => void;
+      getRemoteHarvestRooms: () => void;
     }
   }
 }
@@ -256,6 +262,11 @@ export function initializeConsoleCommands(): void {
   global.getRoomStatus = getRoomStatus;
   global.markRoomUnsafe = markRoomUnsafeCmd;
   global.debugRoomState = debugRoomState;
+  // Exploration commands
+  global.getExploredRooms = getExploredRooms;
+  global.enableRemoteHarvest = enableRemoteHarvest;
+  global.disableRemoteHarvest = disableRemoteHarvest;
+  global.getRemoteHarvestRooms = getRemoteHarvestRooms;
 
   debugLog.info('Console commands initialized: toggleMultiRoom, enableMultiRoom, disableMultiRoom, getMultiRoomStatus, resetMultiRoomCache');
 }
@@ -268,4 +279,108 @@ export function initializeConsoleCommands(): void {
  */
 export function isMultiRoomEnabled(): boolean {
   return Memory.multiRoomEnabled ?? MULTI_ROOM_CONFIG.enabled;
+}
+
+// ============================================================================
+// EXPLORATION CONSOLE COMMANDS
+// ============================================================================
+
+/**
+ * Get all explored rooms and their safety status
+ */
+export function getExploredRooms(): void {
+  if (!Memory.exploration || Object.keys(Memory.exploration).length === 0) {
+    console.log('ℹ️  No rooms have been explored yet');
+    return;
+  }
+
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`🗺️  EXPLORED ROOMS (${Object.keys(Memory.exploration).length})`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+  for (const roomName in Memory.exploration) {
+    const data = Memory.exploration[roomName];
+    const age = Game.time - data.lastScanned;
+    const ageStr = age < 100 ? `${age}t` : `${Math.floor(age / 100)}00t`;
+
+    const statusIcon = data.safetyStatus === 'SAFE' ? '✅' :
+                       data.safetyStatus === 'HOSTILE' ? '⚠️' : '❓';
+
+    console.log(`${statusIcon} ${roomName}: ${data.safetyStatus}`);
+    console.log(`   Sources: ${data.sourceCount || 0} | Hostiles: ${data.hostileCount} | Age: ${ageStr}`);
+    if (data.controllerOwner) {
+      console.log(`   Owner: ${data.controllerOwner} (Level ${data.controllerLevel || 0})`);
+    }
+    if (data.enabledForRemoteHarvest) {
+      console.log(`   🔧 Remote harvesting ENABLED`);
+    }
+  }
+}
+
+/**
+ * Enable remote harvesting for a safe room
+ */
+export function enableRemoteHarvest(roomName: string): void {
+  if (!Memory.exploration) Memory.exploration = {};
+
+  const data = Memory.exploration[roomName];
+  if (!data) {
+    console.log(`❌ Room ${roomName} has not been explored yet`);
+    return;
+  }
+
+  if (data.safetyStatus === 'HOSTILE') {
+    console.log(`❌ Cannot enable remote harvest: ${roomName} is HOSTILE (${data.hostileCount} attackers)`);
+    return;
+  }
+
+  data.enabledForRemoteHarvest = true;
+  console.log(`✅ Remote harvesting enabled for ${roomName}`);
+  console.log(`   Sources: ${data.sourceCount || 0}`);
+}
+
+/**
+ * Disable remote harvesting for a room
+ */
+export function disableRemoteHarvest(roomName: string): void {
+  if (!Memory.exploration) Memory.exploration = {};
+
+  const data = Memory.exploration[roomName];
+  if (!data) {
+    console.log(`❌ Room ${roomName} has not been explored yet`);
+    return;
+  }
+
+  data.enabledForRemoteHarvest = false;
+  console.log(`✅ Remote harvesting disabled for ${roomName}`);
+}
+
+/**
+ * Get all rooms enabled for remote harvesting
+ */
+export function getRemoteHarvestRooms(): void {
+  if (!Memory.exploration) {
+    console.log('ℹ️  No rooms have been explored yet');
+    return;
+  }
+
+  const remoteRooms = Object.keys(Memory.exploration).filter(
+    roomName => Memory.exploration![roomName].enabledForRemoteHarvest
+  );
+
+  if (remoteRooms.length === 0) {
+    console.log('ℹ️  No rooms enabled for remote harvesting');
+    console.log('💡 Use enableRemoteHarvest(roomName) to enable a safe room');
+    return;
+  }
+
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+  console.log(`🔧 REMOTE HARVEST ROOMS (${remoteRooms.length})`);
+  console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
+
+  for (const roomName of remoteRooms) {
+    const data = Memory.exploration[roomName];
+    console.log(`✅ ${roomName}`);
+    console.log(`   Sources: ${data.sourceCount || 0} | Status: ${data.safetyStatus}`);
+  }
 }

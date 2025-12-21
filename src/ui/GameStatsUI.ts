@@ -71,7 +71,8 @@ export class GameStatsUI {
       energyCapacity: room.energyCapacityAvailable,
       controllerLevel: room.controller?.level,
       spawns: room.find(FIND_MY_SPAWNS).length,
-      spawnTier: getCurrentSpawnTier(room)
+      spawnTier: "-"
+      // spawnTier: getCurrentSpawnTier(room, context.creepCounts.harvesters, context.creepCounts.haulers)
     }));
 
     this.cachedStats = {

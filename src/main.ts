@@ -51,7 +51,12 @@ import {
   getDiscoveredRoomsCmd,
   getRoomStatus,
   markRoomUnsafeCmd,
-  debugRoomState
+  debugRoomState,
+  // Exploration console commands
+  getExploredRooms,
+  enableRemoteHarvest,
+  disableRemoteHarvest,
+  getRemoteHarvestRooms
 } from "./utils/consoleCommands";
 
 import {
@@ -116,7 +121,12 @@ export {
   getDiscoveredRoomsCmd,
   getRoomStatus,
   markRoomUnsafeCmd,
-  debugRoomState
+  debugRoomState,
+  // Exploration commands
+  getExploredRooms,
+  enableRemoteHarvest,
+  disableRemoteHarvest,
+  getRemoteHarvestRooms
 };
 
 // Export debug functions for external use
@@ -191,4 +201,9 @@ global.getDiscoveredRooms = getDiscoveredRoomsCmd;
 global.getRoomStatus = getRoomStatus;
 global.markRoomUnsafe = markRoomUnsafeCmd;
 global.debugRoomState = debugRoomState;
+// Exploration globals
+global.getExploredRooms = getExploredRooms;
+global.enableRemoteHarvest = enableRemoteHarvest;
+global.disableRemoteHarvest = disableRemoteHarvest;
+global.getRemoteHarvestRooms = getRemoteHarvestRooms;
 

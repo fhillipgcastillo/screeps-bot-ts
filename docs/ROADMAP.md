@@ -1,6 +1,6 @@
 # Screeps Bot Evolution Roadmap
 
-**Status**: Planning Phase
+**Status**: Phase 1 completed; Phase 2 in progress
 **Target**: Multi-room autonomous expansion with squad-based combat and dynamic strategy switching
 **Timeline**: 5-7 weeks
 
@@ -111,14 +111,15 @@ This roadmap outlines the transition from a single-room, reactive bot to a multi
 **Duration**: Weeks 1–2
 **Goal**: Ensure bot recovers from 0 energy and progresses reliably through levels 1–2
 **Key Changes**:
-- Implement tiered spawn templates (emergency → normal → advanced) in `spawn.manager.ts`
-- Add energy reserve logic: check minimum energy before spawning larger bodies
-- Create `src/utils/energy-bootstrap.ts` with fallback patterns and safe-spawn thresholds
+- Implement tiered spawn templates (EMERGENCY → NORMAL → ADVANCED) driven by creep counts (< 2 harvesters OR < 2 haulers triggers EMERGENCY) in `spawn.manager.ts`
+- Emergency tier bypasses reserves and prefers small bodies for fast recovery when energy is available
+- Add energy reserve thresholds per RCL (1→50, 2→100, 3→150, 4→200, 5→250, 6→300, 7→350, 8→400)
+- Create `src/utils/energy-bootstrap.ts` with template selection and safe-spawn checks
 - Optimize energy distribution:
-  - Add container caching layer to reduce FIND operations
+  - Add container caching to reduce FIND calls
   - Refactor `role.hauler.ts` to prioritize drops near sources
   - Update builder/upgrader to proactively pull from containers
-- Verify level 1→2 progression with consistent testing
+  - Verify level 1→2 progression with consistent testing
 
 **Acceptance Criteria**:
 - Bot recovers from 0 energy without manual intervention
@@ -128,10 +129,10 @@ This roadmap outlines the transition from a single-room, reactive bot to a multi
 
 **Files Involved**:
 - `src/spawn.manager.ts` (refactor spawn logic)
-- `src/role.hauler.ts` (prioritize drops)
-- `src/role.builder.ts`, `src/role.upgrader.ts` (pull from containers)
-- NEW: `src/utils/energy-bootstrap.ts` (fallback patterns)
-- Tests: expand `test/unit/main.test.ts` for spawn scenarios
+- `src/utils/energy-bootstrap.ts` (tier selection, reserves)
+- `src/levels.handler.ts` (role minima updates)
+- `src/types.ts` (typed Memory updates)
+- `src/role.hauler.ts`, `src/role.builder.ts`, `src/role.upgrader.ts`
 
 ---
 
@@ -139,27 +140,30 @@ This roadmap outlines the transition from a single-room, reactive bot to a multi
 **Duration**: Weeks 2–3
 **Goal**: Enable harvesters to autonomously discover and migrate to adjacent rooms with threat detection
 **Key Changes**:
+- Add `role.explorer.ts`: scouts adjacent rooms, detects hostile attackers, and updates `Memory.exploration`
+- Exploration console commands in `src/utils/consoleCommands.ts`: `getExploredRooms`, `enableRemoteHarvest`, `disableRemoteHarvest`, `getRemoteHarvestRooms`
 - Wire `room-safety.ts` checks into `role.harvester_stationary.ts` decision-making
 - Implement room-transition pathfinding with timeout handling (e.g., 100-tick limit before fallback)
-- Add adjacent-room auto-discovery: harvesters check nearby rooms for viable energy sources
 - Build room safety status cache: track threats per room, auto-disable when enemies detected
 - Extend `config/multi-room.config.ts` with dynamic room list (discovered vs. claimed rooms)
 - Implement source profitability scoring (depletes over time → migration trigger)
 
 **Acceptance Criteria**:
+- Explorer creeps scan adjacent rooms and record safety in memory
+- Console commands toggle remote harvesting for safe rooms
 - Harvesters autonomously migrate to new rooms when current source depletes
-- Room safety checks prevent entry into hostile rooms
-- Threat detection auto-disables unsafe rooms until cleared
+- Room safety checks prevent entry into hostile rooms; hostile detection triggers return
 - Transition timeout prevents stuck creeps
 - Multi-room scouting visible in logs and UI
 
 **Files Involved**:
-- `src/role.harvester_stationary.ts` (add room transition logic)
+- `src/role.explorer.ts` (exploration logic)
+- `src/utils/consoleCommands.ts` (exploration commands)
+- `src/role.harvester_stationary.ts` (room transition logic)
 - `src/config/multi-room.config.ts` (dynamic room list)
-- `src/utils/room-safety.ts` (enhance threat caching)
-- `src/utils/createExitRouts.ts` (improve pathfinding)
-- NEW: `src/utils/sourceProfiler.ts` (track source profitability)
-- Tests: integration tests for multi-room transitions
+- `src/utils/room-safety.ts` (threat caching)
+- `src/utils/createExitRouts.ts` (pathfinding)
+- NEW: `src/utils/sourceProfiler.ts` (source profitability)
 
 ---
 
