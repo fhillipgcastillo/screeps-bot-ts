@@ -11,6 +11,7 @@ import {
   RoomType
 } from '../config/multi-room.config';
 import { debugLog } from './Logger';
+import { shouldUseCache, getCacheDuration } from './consoleCommands';
 
 // Forward declarations for multi-room types to avoid circular imports
 interface MultiRoomSource {
@@ -66,6 +67,16 @@ declare global {
       roomAccessibility?: { [fromRoom: string]: { [toRoom: string]: RoomAccessibilityInfo } };
       resourceCache?: { [homeRoom: string]: ResourceDiscoveryCache };
       lastGlobalUpdate?: number;
+      cacheSettings?: {
+        roomSafetyEnabled?: boolean;
+        resourceDiscoveryEnabled?: boolean;
+        roomAccessibilityEnabled?: boolean;
+        durations?: {
+          roomSafety?: number;
+          resourceDiscovery?: number;
+          roomAccessibility?: number;
+        };
+      };
     };
   }
 }
@@ -96,11 +107,17 @@ function initializeMultiRoomMemory(): void {
 export function isRoomSafe(roomName: string, forceRefresh: boolean = false): boolean {
   initializeMultiRoomMemory();
 
+  // Import cache helpers here to avoid circular dependency
+
   const cached = Memory.multiRoom!.roomSafety![roomName];
   const now = Game.time;
 
-  // Use cached result if available and not expired
-  if (!forceRefresh && cached && (now - cached.lastChecked) < MULTI_ROOM_CONFIG.safetyCacheDuration) {
+  // Check if caching is enabled and cache is valid
+  const cacheEnabled = shouldUseCache('roomSafety');
+  const cacheDuration = getCacheDuration('roomSafety');
+
+  // Use cached result if available, caching is enabled, and not expired
+  if (!forceRefresh && cacheEnabled && cached && (now - cached.lastChecked) < cacheDuration) {
     if (MULTI_ROOM_CONFIG.debugEnabled) {
       debugLog.debug(`Room safety [CACHE HIT]: ${roomName} = ${cached.status} (age: ${now - cached.lastChecked}t)`);
     }
@@ -231,8 +248,12 @@ export function isRoomAccessible(fromRoom: string, toRoom: string, forceRefresh:
   const cached = Memory.multiRoom!.roomAccessibility![fromRoom]?.[toRoom];
   const now = Game.time;
 
-  // Use cached result if available and not expired
-  if (!forceRefresh && cached && (now - cached.lastChecked) < MULTI_ROOM_CONFIG.safetyCacheDuration) {
+  // Check if caching is enabled and cache is valid
+  const cacheEnabled = shouldUseCache('roomAccessibility');
+  const cacheDuration = getCacheDuration('roomAccessibility');
+
+  // Use cached result if available, caching is enabled, and not expired
+  if (!forceRefresh && cacheEnabled && cached && (now - cached.lastChecked) < cacheDuration) {
     if (MULTI_ROOM_CONFIG.debugEnabled) {
       debugLog.debug(`Room accessibility (cached): ${fromRoom} -> ${toRoom} = ${cached.accessible}`);
     }

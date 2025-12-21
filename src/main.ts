@@ -52,6 +52,12 @@ import {
   getRoomStatus,
   markRoomUnsafeCmd,
   debugRoomState,
+  // Cache configuration commands
+  toggleCache,
+  enableCache,
+  disableCache,
+  setCacheDuration,
+  cacheStatus,
   // Exploration console commands
   getExploredRooms,
   enableRemoteHarvest,
@@ -122,6 +128,12 @@ export {
   getRoomStatus,
   markRoomUnsafeCmd,
   debugRoomState,
+  // Cache configuration commands
+  toggleCache,
+  enableCache,
+  disableCache,
+  setCacheDuration,
+  cacheStatus,
   // Exploration commands
   getExploredRooms,
   enableRemoteHarvest,
@@ -201,6 +213,12 @@ global.getDiscoveredRooms = getDiscoveredRoomsCmd;
 global.getRoomStatus = getRoomStatus;
 global.markRoomUnsafe = markRoomUnsafeCmd;
 global.debugRoomState = debugRoomState;
+// Cache configuration globals
+global.toggleCache = toggleCache;
+global.enableCache = enableCache;
+global.disableCache = disableCache;
+global.setCacheDuration = setCacheDuration;
+global.cacheStatus = cacheStatus;
 // Exploration globals
 global.getExploredRooms = getExploredRooms;
 global.enableRemoteHarvest = enableRemoteHarvest;

@@ -173,6 +173,7 @@ export interface ExplorerMemory extends BaseCreepMemory {
     scannedRooms?: string[];       // List of rooms already scanned
     isReturning?: boolean;         // Whether explorer is returning home
     explorationComplete?: boolean; // Whether all adjacent rooms scanned
+    transitionStartTick?: number;  // Tick when current transition started
 }
 
 /**

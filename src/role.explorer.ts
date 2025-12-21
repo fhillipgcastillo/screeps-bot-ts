@@ -4,6 +4,7 @@
  * Updates room exploration memory with safety status
  */
 
+import { MULTI_ROOM_CONFIG } from "./config/multi-room.config";
 import { ExplorerMemory, RoomExplorationData, RoomSafetyStatus } from "./types";
 import { debugLog } from "./utils/Logger";
 
@@ -130,6 +131,7 @@ export function runExplorer(creep: Creep): void {
 
   // If currently in target room, perform scan and decide next state
   if (memory.targetRoom && creep.room.name === memory.targetRoom) {
+    memory.transitionStartTick = undefined;
     scanCurrentRoom(creep);
 
     if (!memory.scannedRooms.includes(creep.room.name)) {
@@ -153,6 +155,7 @@ export function runExplorer(creep: Creep): void {
     if (creep.room.name === memory.homeRoom) {
       memory.isReturning = false;
       memory.targetRoom = undefined;
+      memory.transitionStartTick = undefined;
     } else {
       const homePos = new RoomPosition(25, 25, memory.homeRoom);
       creep.moveTo(homePos, { reusePath: 10 });
@@ -169,13 +172,47 @@ export function runExplorer(creep: Creep): void {
       return;
     }
     memory.targetRoom = nextRoom;
+    memory.transitionStartTick = Game.time;
     debugLog.debug(`[EXPLORER] ${creep.name} targeting adjacent room ${nextRoom}`);
   }
 
   // Move towards target room if set
   if (memory.targetRoom) {
+    const elapsed = memory.transitionStartTick ? Game.time - memory.transitionStartTick : 0;
+    if (!memory.transitionStartTick) {
+      memory.transitionStartTick = Game.time;
+    }
+
+    if (elapsed > MULTI_ROOM_CONFIG.roomTransitionTimeout) {
+      debugLog.warn(
+        `[EXPLORER] ${creep.name} room transition timeout: ${creep.room.name} → ${memory.targetRoom} ` +
+        `(${elapsed}/${MULTI_ROOM_CONFIG.roomTransitionTimeout} ticks)`
+      );
+      initializeExplorationMemory();
+      if (Memory.exploration) {
+        Memory.exploration[memory.targetRoom] = {
+          roomName: memory.targetRoom,
+          safetyStatus: RoomSafetyStatus.EXPIRED,
+          lastScanned: Game.time,
+          hostileCount: 0,
+          explorerName: creep.name
+        } as RoomExplorationData;
+      }
+      memory.isReturning = true;
+      memory.targetRoom = undefined;
+      memory.transitionStartTick = undefined;
+      return;
+    }
+
+    const onBorder = creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49;
     const targetPos = new RoomPosition(25, 25, memory.targetRoom);
-    creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
+    const moveResult = creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
+
+    if (moveResult !== OK && moveResult !== ERR_TIRED) {
+      debugLog.warn(`[EXPLORER] ${creep.name} moveTo(${memory.targetRoom}) failed with ${moveResult} at ${creep.pos}`);
+    } else if (MULTI_ROOM_CONFIG.debugEnabled && onBorder && Game.time % 20 === 0) {
+      debugLog.debug(`[EXPLORER] ${creep.name} transitioning to ${memory.targetRoom} on border ${creep.pos}`);
+    }
     return;
   }
 

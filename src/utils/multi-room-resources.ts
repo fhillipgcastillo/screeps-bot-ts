@@ -57,12 +57,19 @@ function initializeResourceCache(): void {
 export function findMultiRoomSources(homeRoom: string, depth: number = MULTI_ROOM_CONFIG.explorationDepth, forceRefresh: boolean = false): MultiRoomSource[] {
   initializeResourceCache();
 
+  // Import cache helpers here to avoid circular dependency
+  const { shouldUseCache, getCacheDuration } = require('./consoleCommands');
+  
   const cached = Memory.multiRoom!.resourceCache![homeRoom];
   const now = Game.time;
 
-  // Use cached result if available and not expired
-  if (!forceRefresh && cached &&
-      (now - cached.lastUpdated) < MULTI_ROOM_CONFIG.resourceCacheDuration &&
+  // Check if caching is enabled and cache is valid
+  const cacheEnabled = shouldUseCache('resourceDiscovery');
+  const cacheDuration = getCacheDuration('resourceDiscovery');
+  
+  // Use cached result if available, caching is enabled, and not expired
+  if (!forceRefresh && cacheEnabled && cached &&
+      (now - cached.lastUpdated) < cacheDuration &&
       cached.explorationDepth === depth) {
 
     if (MULTI_ROOM_CONFIG.debugEnabled) {

@@ -218,7 +218,7 @@ export class GameManager {
    * Cleans up multi-room memory structures
    */
   private cleanUpMultiRoomMemory(): void {
-    try {
+    // try {
       // Update room safety cache
       updateRoomSafetyCache();
 
@@ -234,9 +234,9 @@ export class GameManager {
       if (MULTI_ROOM_CONFIG.debugEnabled) {
         debugLog.debug('Multi-room memory cleanup completed');
       }
-    } catch (error) {
-      logger.error('Error during multi-room memory cleanup:', error);
-    }
+    // } catch (error) {
+    //   logger.error('Error during multi-room memory cleanup:', error);
+    // }
   }
 
   /**
