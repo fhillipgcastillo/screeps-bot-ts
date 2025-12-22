@@ -272,7 +272,7 @@ const roleHarvester: RoleHarvester = {
     initializeMultiRoomMemory: function (creep) {
         if (!creep.memory.multiRoom) {
             creep.memory.multiRoom = {
-                enabled: MULTI_ROOM_CONFIG.enabled,
+                enabled: isMultiRoomEnabled(),  // Use current toggle state, not static config
                 homeRoom: creep.room.name,
                 isMultiRoom: false,
                 failureCount: 0

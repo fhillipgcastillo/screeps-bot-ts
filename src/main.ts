@@ -80,78 +80,78 @@ import {
 } from "./ui";
 
 // Re-export for external use
-export {
-  spawnCreep,
-  spawnHarvester,
-  spawnHauler,
-  spawnBuilder,
-  spawnUpgrader,
-  spawnDefender,
-  spawnRanger,
-  spawnExplorer,
-  getSpawnStatus,
-  getAllSpawnStatuses,
-  getCurrentCreepCounts,
-  needsMoreCreeps,
-  getBodyPreview,
-  getManualSpawner,
-  // UI functions
-  showCreeps,
-  showRooms,
-  showStats,
-  showVisual,
-  getStats,
-  creeps,
-  rooms,
-  toggleVisual,
-  updateVisualOverlay,
-  helpUI,
-  getGameStatsUI,
-  // Multi-room debugging functions
-  debugMultiRoomOperations,
-  runMultiRoomDiagnostics,
-  exportMultiRoomStats,
-  clearPerformanceHistory,
-  clearResourceCache,
-  MULTI_ROOM_CONFIG,
-  // Multi-room console commands
-  toggleMultiRoom,
-  enableMultiRoom,
-  disableMultiRoom,
-  getMultiRoomStatus,
-  resetMultiRoomCache,
-  // Room claiming commands
-  claimRoomCmd,
-  getClaimableRooms,
-  getClaimedRoomsCmd,
-  getDiscoveredRoomsCmd,
-  getRoomStatus,
-  markRoomUnsafeCmd,
-  debugRoomState,
-  // Cache configuration commands
-  toggleCache,
-  enableCache,
-  disableCache,
-  setCacheDuration,
-  cacheStatus,
-  // Exploration commands
-  getExploredRooms,
-  enableRemoteHarvest,
-  disableRemoteHarvest,
-  getRemoteHarvestRooms
-};
+// export {
+//   spawnCreep,
+//   spawnHarvester,
+//   spawnHauler,
+//   spawnBuilder,
+//   spawnUpgrader,
+//   spawnDefender,
+//   spawnRanger,
+//   spawnExplorer,
+//   getSpawnStatus,
+//   getAllSpawnStatuses,
+//   getCurrentCreepCounts,
+//   needsMoreCreeps,
+//   getBodyPreview,
+//   getManualSpawner,
+//   // UI functions
+//   showCreeps,
+//   showRooms,
+//   showStats,
+//   showVisual,
+//   getStats,
+//   creeps,
+//   rooms,
+//   toggleVisual,
+//   updateVisualOverlay,
+//   helpUI,
+//   getGameStatsUI,
+//   // Multi-room debugging functions
+//   debugMultiRoomOperations,
+//   runMultiRoomDiagnostics,
+//   exportMultiRoomStats,
+//   clearPerformanceHistory,
+//   clearResourceCache,
+//   MULTI_ROOM_CONFIG,
+//   // Multi-room console commands
+//   toggleMultiRoom,
+//   enableMultiRoom,
+//   disableMultiRoom,
+//   getMultiRoomStatus,
+//   resetMultiRoomCache,
+//   // Room claiming commands
+//   claimRoomCmd,
+//   getClaimableRooms,
+//   getClaimedRoomsCmd,
+//   getDiscoveredRoomsCmd,
+//   getRoomStatus,
+//   markRoomUnsafeCmd,
+//   debugRoomState,
+//   // Cache configuration commands
+//   toggleCache,
+//   enableCache,
+//   disableCache,
+//   setCacheDuration,
+//   cacheStatus,
+//   // Exploration commands
+//   getExploredRooms,
+//   enableRemoteHarvest,
+//   disableRemoteHarvest,
+//   getRemoteHarvestRooms
+// };
 
-// Export debug functions for external use
-export const enableDebug = () => gm.enableDebug();
-export const disableDebug = () => gm.disableDebug();
-export const toggleDebug = () => gm.toggleDebug();
-export const isDebugEnabled = () => gm.isDebugEnabled();
+// // Export debug functions for external use
+// export const enableDebug = () => gm.enableDebug();
+// export const disableDebug = () => gm.disableDebug();
+// export const toggleDebug = () => gm.toggleDebug();
+// export const isDebugEnabled = () => gm.isDebugEnabled();
 
-// Spawn pause/resume (spawning only - active creeps continue)
-export const pauseSpawning = () => gm.pauseGame();
-export const resumeSpawning = () => gm.resumeGame();
-export const toggleSpawning = () => gm.togglePause();
-export const isSpawningPaused = () => gm.isGamePaused();
+// // Spawn pause/resume (spawning only - active creeps continue)
+// export const pauseSpawning = () => gm.pauseGame();
+// export const resumeSpawning = () => gm.resumeGame();
+// export const toggleSpawning = () => gm.togglePause();
+// export const isSpawningPaused = () => gm.isGamePaused();
 
 global.gm = gm;
 

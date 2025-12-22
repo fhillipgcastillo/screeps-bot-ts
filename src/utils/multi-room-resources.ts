@@ -8,7 +8,7 @@
 import { MULTI_ROOM_CONFIG, RoomType } from '../config/multi-room.config';
 import { isRoomSafe, isRoomAccessible, getRoomResourceValue } from './room-safety';
 import { debugLog } from './Logger';
-import { scoreSourceProfitability } from './sourceProfiler';
+import { shouldUseCache, getCacheDuration } from './cache-config';
 
 // Import types from room-safety.ts to avoid circular imports
 type MultiRoomSource = {
@@ -57,16 +57,13 @@ function initializeResourceCache(): void {
 export function findMultiRoomSources(homeRoom: string, depth: number = MULTI_ROOM_CONFIG.explorationDepth, forceRefresh: boolean = false): MultiRoomSource[] {
   initializeResourceCache();
 
-  // Import cache helpers here to avoid circular dependency
-  const { shouldUseCache, getCacheDuration } = require('./consoleCommands');
-  
   const cached = Memory.multiRoom!.resourceCache![homeRoom];
   const now = Game.time;
 
   // Check if caching is enabled and cache is valid
   const cacheEnabled = shouldUseCache('resourceDiscovery');
   const cacheDuration = getCacheDuration('resourceDiscovery');
-  
+
   // Use cached result if available, caching is enabled, and not expired
   if (!forceRefresh && cacheEnabled && cached &&
       (now - cached.lastUpdated) < cacheDuration &&

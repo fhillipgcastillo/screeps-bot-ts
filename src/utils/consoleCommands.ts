@@ -11,6 +11,7 @@ import { getResourceCacheStats, clearResourceCache } from './multi-room-resource
 import { cleanupSourceProfitabilityCache, clearSourceProfitabilityCache } from './sourceProfiler';
 import { claimRoom, getClaimedRooms, getDiscoveredRooms, getRoomState, markRoomUnsafe, shouldClaimRoom } from './roomClaiming';
 import { RoomSafetyStatus, RoomExplorationData } from '../types';
+import { CacheType, shouldUseCache as shouldUseCacheFromConfig, getCacheDuration as getCacheDurationFromConfig, initializeCacheSettings } from './cache-config';
 
 // ============================================================================
 // TYPES AND MEMORY INTERFACE
@@ -199,69 +200,12 @@ export function resetMultiRoomCache(): void {
 // CACHE CONFIGURATION HELPERS
 // ============================================================================
 
-export type CacheType = 'roomSafety' | 'resourceDiscovery' | 'roomAccessibility';
-
 /**
- * Initialize cache settings in memory with disabled defaults
+ * Re-export cache control functions from cache-config to maintain API compatibility
+ * This avoids circular dependencies while keeping the public interface the same.
  */
-function initializeCacheSettings(): void {
-  if (!Memory.multiRoom) {
-    Memory.multiRoom = {};
-  }
-  if (!Memory.multiRoom.cacheSettings) {
-    Memory.multiRoom.cacheSettings = {
-      roomSafetyEnabled: false,
-      resourceDiscoveryEnabled: false,
-      roomAccessibilityEnabled: false,
-      durations: {
-        roomSafety: 0,
-        resourceDiscovery: 0,
-        roomAccessibility: 0
-      }
-    };
-  }
-}
-
-/**
- * Check if caching is enabled for a specific cache type
- * @param cacheType - The type of cache to check
- * @returns true if caching is enabled, false otherwise (default: false)
- */
-export function shouldUseCache(cacheType: CacheType): boolean {
-  initializeCacheSettings();
-  
-  switch (cacheType) {
-    case 'roomSafety':
-      return Memory.multiRoom!.cacheSettings!.roomSafetyEnabled ?? false;
-    case 'resourceDiscovery':
-      return Memory.multiRoom!.cacheSettings!.resourceDiscoveryEnabled ?? false;
-    case 'roomAccessibility':
-      return Memory.multiRoom!.cacheSettings!.roomAccessibilityEnabled ?? false;
-    default:
-      return false;
-  }
-}
-
-/**
- * Get the cache duration for a specific cache type
- * @param cacheType - The type of cache to get duration for
- * @returns Cache duration in ticks (default: 0)
- */
-export function getCacheDuration(cacheType: CacheType): number {
-  initializeCacheSettings();
-  
-  const durations = Memory.multiRoom!.cacheSettings!.durations!;
-  switch (cacheType) {
-    case 'roomSafety':
-      return durations.roomSafety ?? 0;
-    case 'resourceDiscovery':
-      return durations.resourceDiscovery ?? 0;
-    case 'roomAccessibility':
-      return durations.roomAccessibility ?? 0;
-    default:
-      return 0;
-  }
-}
+export const shouldUseCache = shouldUseCacheFromConfig;
+export const getCacheDuration = getCacheDurationFromConfig;
 
 // ============================================================================
 // CACHE CONFIGURATION COMMANDS
@@ -273,26 +217,26 @@ export function getCacheDuration(cacheType: CacheType): number {
  */
 export function toggleCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAccessibility' | 'all' = 'all'): void {
   initializeCacheSettings();
-  
+
   const settings = Memory.multiRoom!.cacheSettings!;
-  
+
   if (type === 'all') {
     const currentState = settings.roomSafetyEnabled || settings.resourceDiscoveryEnabled || settings.roomAccessibilityEnabled;
     const newState = !currentState;
-    
+
     settings.roomSafetyEnabled = newState;
     settings.resourceDiscoveryEnabled = newState;
     settings.roomAccessibilityEnabled = newState;
-    
+
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`🔄 All Caches: ${newState ? '✅ ENABLED' : '❌ DISABLED'}`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    
+
     debugLog.info(`All caches toggled: ${newState}`);
   } else {
     let currentState: boolean;
     let label: string;
-    
+
     switch (type) {
       case 'roomSafety':
         currentState = settings.roomSafetyEnabled ?? false;
@@ -310,11 +254,11 @@ export function toggleCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAcce
         label = 'Room Accessibility Cache';
         break;
     }
-    
+
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`🔄 ${label}: ${!currentState ? '✅ ENABLED' : '❌ DISABLED'}`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    
+
     debugLog.info(`${label} toggled: ${!currentState}`);
   }
 }
@@ -325,31 +269,31 @@ export function toggleCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAcce
  */
 export function enableCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAccessibility' | 'all' = 'all'): void {
   initializeCacheSettings();
-  
+
   const settings = Memory.multiRoom!.cacheSettings!;
-  
+
   if (type === 'all') {
     settings.roomSafetyEnabled = true;
     settings.resourceDiscoveryEnabled = true;
     settings.roomAccessibilityEnabled = true;
-    
+
     // Set default durations from config
     settings.durations!.roomSafety = MULTI_ROOM_CONFIG.safetyCacheDuration;
     settings.durations!.resourceDiscovery = MULTI_ROOM_CONFIG.resourceCacheDuration;
     settings.durations!.roomAccessibility = MULTI_ROOM_CONFIG.safetyCacheDuration;
-    
+
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`✅ All Caches ENABLED`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`   └─ Room Safety: ${settings.durations!.roomSafety} ticks`);
     console.log(`   └─ Resource Discovery: ${settings.durations!.resourceDiscovery} ticks`);
     console.log(`   └─ Room Accessibility: ${settings.durations!.roomAccessibility} ticks`);
-    
+
     debugLog.info('All caches enabled via console command');
   } else {
     let label: string;
     let duration: number;
-    
+
     switch (type) {
       case 'roomSafety':
         settings.roomSafetyEnabled = true;
@@ -370,12 +314,12 @@ export function enableCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAcce
         label = 'Room Accessibility Cache';
         break;
     }
-    
+
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`✅ ${label} ENABLED`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`   └─ Duration: ${duration} ticks`);
-    
+
     debugLog.info(`${label} enabled via console command`);
   }
 }
@@ -386,22 +330,22 @@ export function enableCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAcce
  */
 export function disableCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAccessibility' | 'all' = 'all'): void {
   initializeCacheSettings();
-  
+
   const settings = Memory.multiRoom!.cacheSettings!;
-  
+
   if (type === 'all') {
     settings.roomSafetyEnabled = false;
     settings.resourceDiscoveryEnabled = false;
     settings.roomAccessibilityEnabled = false;
-    
+
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`❌ All Caches DISABLED`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    
+
     debugLog.info('All caches disabled via console command');
   } else {
     let label: string;
-    
+
     switch (type) {
       case 'roomSafety':
         settings.roomSafetyEnabled = false;
@@ -416,11 +360,11 @@ export function disableCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAcc
         label = 'Room Accessibility Cache';
         break;
     }
-    
+
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
     console.log(`❌ ${label} DISABLED`);
     console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
-    
+
     debugLog.info(`${label} disabled via console command`);
   }
 }
@@ -432,15 +376,15 @@ export function disableCache(type: 'roomSafety' | 'resourceDiscovery' | 'roomAcc
  */
 export function setCacheDuration(type: 'roomSafety' | 'resourceDiscovery' | 'roomAccessibility', duration: number): void {
   initializeCacheSettings();
-  
+
   if (duration < 0) {
     console.log('❌ Error: Duration must be >= 0');
     return;
   }
-  
+
   const settings = Memory.multiRoom!.cacheSettings!;
   let label: string;
-  
+
   switch (type) {
     case 'roomSafety':
       settings.durations!.roomSafety = duration;
@@ -455,12 +399,12 @@ export function setCacheDuration(type: 'roomSafety' | 'resourceDiscovery' | 'roo
       label = 'Room Accessibility Cache';
       break;
   }
-  
+
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`⏱️  ${label} Duration Set`);
   console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`);
   console.log(`   └─ New Duration: ${duration} ticks`);
-  
+
   debugLog.info(`${label} duration set to ${duration} ticks`);
 }
 
@@ -469,9 +413,9 @@ export function setCacheDuration(type: 'roomSafety' | 'resourceDiscovery' | 'roo
  */
 export function cacheStatus(): void {
   initializeCacheSettings();
-  
+
   const settings = Memory.multiRoom!.cacheSettings!;
-  
+
   console.log(`┏━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓`);
   console.log(`┃        CACHE CONFIGURATION             ┃`);
   console.log(`┗━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┛`);

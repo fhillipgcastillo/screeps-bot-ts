@@ -39,12 +39,17 @@ function cleanUpTargetsState(creep: Creep) {
   creep.memory.resourceTarget = undefined;
 }
 function withdrowRemains(creep: Creep, target: any) {
-  creep.memory.resourceTarget = undefined;
+  debugLog.debug(`${creep.name} withdrowRemains called with target: ${target?.id}`);
+
   let withdrowAction = creep.withdraw(target, RESOURCE_ENERGY);
+  debugLog.debug(`${creep.name} withdraw action: ${withdrowAction}`);
 
   if (withdrowAction === ERR_NOT_IN_RANGE) {
-    // creep.say("Moving...");
+    // Keep target in memory while moving
+    creep.memory.resourceTarget = target.id;
+    debugLog.debug(`${creep.name} NOT IN RANGE, moving to ${target.id}`);
     let movingError = creep.moveTo(target, { visualizePathStyle: { stroke: '#ff6600' } });
+    debugLog.debug(`${creep.name} moveTo result: ${movingError}`);
     if (movingError !== OK) {
       debugLog.warn("mv act err", movingError)
       cleanUpTargetsState(creep);
@@ -52,16 +57,42 @@ function withdrowRemains(creep: Creep, target: any) {
       creep.say("moving...")
     }
   } else if (withdrowAction === ERR_INVALID_TARGET) {
-    debugLog.debug(creep.name + " Inv tgt", target);
+    // Resource object detected (doesn't support withdraw), try pickup instead
+    debugLog.debug(creep.name + " Inv tgt, trying pickup", target.id);
+    creep.memory.resourceTarget = target.id;  // Keep target in memory
     withdrowAction = creep.pickup(target);
+    debugLog.debug(`${creep.name} pickup action: ${withdrowAction}`);
+
+    if (withdrowAction === ERR_NOT_IN_RANGE) {
+      // Not in range, move to target
+      debugLog.debug(`${creep.name} PICKUP NOT IN RANGE, moving to ${target.id}`);
+      let movingError = creep.moveTo(target, { visualizePathStyle: { stroke: '#ffaa00' } });
+      debugLog.debug(`${creep.name} moveTo result: ${movingError}`);
+      if (movingError !== OK) {
+        debugLog.warn("pickup move error", movingError)
+        cleanUpTargetsState(creep);
+      } else {
+        creep.say("moving to resource...")
+      }
+    } else if (withdrowAction === OK) {
+      // Successfully picked up, resource will be consumed on next tick
+      debugLog.debug(creep.name + " picked up energy from " + target.id);
+    } else {
+      debugLog.warn(creep.name + " pickup error", withdrowAction);
+      cleanUpTargetsState(creep);
+    }
   } else if (withdrowAction === ERR_NOT_ENOUGH_RESOURCES) {
-    creep.say("Not enough energy");
+    debugLog.debug(creep.name + " target depleted, clearing");
     cleanUpTargetsState(creep);
-  } else if (withdrowAction !== OK) {
-    debugLog.warn(creep.name + "  Rsc error", withdrowAction);
+  } else if (withdrowAction === OK) {
+    // Successfully withdrew energy
+    debugLog.debug(creep.name + " withdrew energy");
+    // Don't clear immediately - may need multiple withdrawals from same target
+  } else {
+    debugLog.warn(creep.name + " withdraw error", withdrowAction);
     cleanUpTargetsState(creep);
   }
-};
+}
 const haulerHandler: RoleHauler = {
   /** @param {Creep} creep **/
   spawn: undefined,
@@ -125,14 +156,18 @@ const haulerHandler: RoleHauler = {
     // Distribution-first assignment
     if (MULTI_ROOM_CONFIG.useDistribution) {
       if (collectionTargets.length === 0) {
+        debugLog.debug(`${creep.name} no collection targets found`);
         this.cleanUpTargetsState(creep);
         return;
       }
       const homeRoom = creep.memory.multiRoom?.homeRoom || creep.room.name;
       const haulers = getCreepsByRole('hauler').filter(h => (h.memory.multiRoom?.homeRoom || h.room.name) === homeRoom && h.memory.haulering);
+      debugLog.debug(`${creep.name} found ${haulers.length} haulers to distribute among ${collectionTargets.length} targets`);
       assignCollectionTargetsToHaulers(haulers, collectionTargets);
       const assigned = creep.memory.resourceTarget ? Game.getObjectById(creep.memory.resourceTarget as Id<Resource | Tombstone | Ruin>) : null;
+      debugLog.debug(`${creep.name} after assignment: resourceTarget=${creep.memory.resourceTarget}, object found=${assigned !== null}`);
       if (!assigned) {
+        debugLog.warn(`${creep.name} assignment failed, no object found for target ${creep.memory.resourceTarget}`);
         this.cleanUpTargetsState(creep);
         return;
       }
@@ -141,6 +176,15 @@ const haulerHandler: RoleHauler = {
       } else {
         resourceTarget = assigned as Resource;
       }
+    } else {
+      // Fallback when distribution is disabled: use closest target
+      if (collectionTargets.length > 0) {
+        const target = this.getAppropiateResourceTarget(creep, collectionTargets);
+        debugLog.debug(`${creep.name} no distribution, found closest target: ${target?.id}`);
+        if (target && ('amount' in target || 'store' in target)) {
+          resourceTarget = target as Resource | Tombstone | Ruin;
+        }
+      }
     }
 
     // find the next source of energy from `combineSources` similar to what I did on harvesting when there it not path
@@ -148,26 +192,8 @@ const haulerHandler: RoleHauler = {
 
     if (resourceTarget !== null) {
       withdrowRemains(creep, resourceTarget);
-    }
-    // else if (resourceTarget) {
-    //   creep.memory.resourceTarget = resourceTarget?.id;
-    //   let harvestAction = creep.pickup(resourceTarget as Resource);
-
-    //   if (harvestAction === ERR_NOT_IN_RANGE) {
-    //     let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
-    //     if (movingError !== OK) {
-    //       debugLog.warn("move action", movingError)
-    //       this.cleanUpTargetsState(creep);
-    //     }
-    //   } else if (harvestAction !== OK) {
-    //     debugLog.warn(creep.name + "  Rsc Another error", harvestAction);
-    //     debugLog.debug("target", creep.memory.resourceTarget);
-    //     this.cleanUpTargetsState(creep);
-    //   }
-    // }
-    else {
+    } else {
       this.cleanUpTargetsState(creep);
-
     }
   },
   memorizedPrevTargets(creep) {
@@ -362,7 +388,7 @@ const haulerHandler: RoleHauler = {
   initializeMultiRoomMemory: function (creep) {
     if (!creep.memory.multiRoom) {
       creep.memory.multiRoom = {
-        enabled: MULTI_ROOM_CONFIG.enabled,
+        enabled: isMultiRoomEnabled(),  // Use current toggle state, not static config
         homeRoom: creep.room.name,
         isReturningHome: false,
         failureCount: 0
