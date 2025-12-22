@@ -11,7 +11,7 @@ import {
   RoomType
 } from '../config/multi-room.config';
 import { debugLog } from './Logger';
-import { shouldUseCache, getCacheDuration } from './consoleCommands';
+import { shouldUseCache, getCacheDuration } from './cache-config';
 
 // Forward declarations for multi-room types to avoid circular imports
 interface MultiRoomSource {
@@ -56,30 +56,8 @@ interface RoomAccessibilityInfo {
 // GLOBAL CACHE STORAGE
 // ============================================================================
 
-/**
- * Global cache for multi-room information
- * Stored in Memory to persist across ticks
- */
-declare global {
-  interface Memory {
-    multiRoom?: {
-      roomSafety?: { [roomName: string]: RoomSafetyInfo };
-      roomAccessibility?: { [fromRoom: string]: { [toRoom: string]: RoomAccessibilityInfo } };
-      resourceCache?: { [homeRoom: string]: ResourceDiscoveryCache };
-      lastGlobalUpdate?: number;
-      cacheSettings?: {
-        roomSafetyEnabled?: boolean;
-        resourceDiscoveryEnabled?: boolean;
-        roomAccessibilityEnabled?: boolean;
-        durations?: {
-          roomSafety?: number;
-          resourceDiscovery?: number;
-          roomAccessibility?: number;
-        };
-      };
-    };
-  }
-}
+// The global Memory interface for multiRoom is declared in cache-config.ts
+// to avoid circular dependencies between this file and consoleCommands.ts
 
 // Initialize memory structure if it doesn't exist
 function initializeMultiRoomMemory(): void {
