@@ -6,6 +6,8 @@ import { isRoomSafe, isRoomAccessible, checkRoomSafetyBeforeEntry } from './util
 import { getCachedContainers } from './utils/energy-bootstrap';
 import { getNextResourceTarget } from './utils/resource-assignment';
 import { isMultiRoomEnabled } from './utils/consoleCommands';
+import { assignCollectionTargetsToHaulers } from './utils/resource-distribution';
+import { getCreepsByRole } from './types';
 
 type RoleHauler = {
   spawn?: StructureSpawn,
@@ -86,94 +88,84 @@ const haulerHandler: RoleHauler = {
       }
     }
 
-    let combineSources: (Tombstone | Ruin | Resource)[] = [];
-    let resourceTarget;
-    let target: Tombstone | Ruin | null = null;
+    let resourceTarget: Resource | Tombstone | Ruin | null = null;
+    let targetRoomForTransition: string | null = null;
 
     // Try multi-room resources first if enabled and appropriate
+    // Build prioritized collection targets: tombstones -> ruins -> dropped energy
+    let collectionTargets: Array<Resource | Tombstone | Ruin> = [];
+
     if (this.shouldUseMultiRoom(creep) && !creep.memory.multiRoom?.isReturningHome) {
       const multiRoomResources = this.findMultiRoomResources(creep);
       if (multiRoomResources && multiRoomResources.length > 0) {
-        const targetResource = multiRoomResources[0];
-        const targetRoom = targetResource.room?.name;
-
-        // Handle room transition if needed
-        if (targetRoom && targetRoom !== creep.room.name) {
-          if (this.handleRoomTransition(creep, targetRoom)) {
-            return; // Still transitioning to target room
-          }
-          // If transition failed, fall back to single-room logic
+        const candidateRoom = multiRoomResources[0].room?.name;
+        if (candidateRoom && candidateRoom !== creep.room.name) {
+          targetRoomForTransition = candidateRoom;
         } else {
-          // Already in target room or same room, use the multi-room resource
-          if ('amount' in targetResource) {
-            resourceTarget = targetResource as Resource;
-          } else {
-            target = targetResource as (Tombstone | Ruin);
-          }
+          collectionTargets = multiRoomResources;
         }
       }
     }
 
-    // Fall back to single-room logic if no multi-room resources found
-    if (!resourceTarget && !target) {
-      let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
-        {
-          filter: resource => resource.amount >= 10
-          // filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
-        }
-      );
-      const tombStones = creep.room.find(FIND_TOMBSTONES, {
-        filter: r => r.store.energy > 0
-      });
-      const ruins = creep.room.find(FIND_RUINS, {
-        filter: r => r.store.energy > 0
-      });
-      combineSources.concat(tombStones, ruins);
+    // If not already populated by multi-room, gather local targets
+    if (collectionTargets.length === 0 && !targetRoomForTransition) {
+      const tombStones = creep.room.find(FIND_TOMBSTONES, { filter: r => r.store.energy > 0 });
+      const ruins = creep.room.find(FIND_RUINS, { filter: r => r.store.energy > 0 });
+      const droppedResources = creep.room.find(FIND_DROPPED_RESOURCES, { filter: resource => resource.amount >= 10 });
+      collectionTargets = [...tombStones, ...ruins, ...droppedResources];
+    }
 
-      if (tombStones.length > 0) {
-        // Round-robin for tombstones
-        target = getNextResourceTarget(creep.room, 'hauler', tombStones) as Tombstone;
-      } else if (ruins.length > 0) {
-        // Round-robin for ruins
-        target = getNextResourceTarget(creep.room, 'hauler', ruins) as Ruin;
-      } else if (droppedResources.length > 0 && creep.memory.resourceTarget) {
-        resourceTarget = _.find(droppedResources, r => r.id === creep.memory.resourceTarget)
-      } else if (droppedResources.length > 0) {
-        debugLog.debug("no source target - assigning new via round-robin");
-        // Round-robin for dropped resources
-        resourceTarget = getNextResourceTarget(creep.room, 'hauler', droppedResources) as Resource;
+    // Handle room transition if needed
+    if (targetRoomForTransition) {
+      if (this.handleRoomTransition(creep, targetRoomForTransition)) {
+        return; // still moving
+      }
+    }
+
+    // Distribution-first assignment
+    if (MULTI_ROOM_CONFIG.useDistribution) {
+      if (collectionTargets.length === 0) {
+        this.cleanUpTargetsState(creep);
+        return;
+      }
+      const homeRoom = creep.memory.multiRoom?.homeRoom || creep.room.name;
+      const haulers = getCreepsByRole('hauler').filter(h => (h.memory.multiRoom?.homeRoom || h.room.name) === homeRoom && h.memory.haulering);
+      assignCollectionTargetsToHaulers(haulers, collectionTargets);
+      const assigned = creep.memory.resourceTarget ? Game.getObjectById(creep.memory.resourceTarget as Id<Resource | Tombstone | Ruin>) : null;
+      if (!assigned) {
+        this.cleanUpTargetsState(creep);
+        return;
+      }
+      if ('store' in assigned) {
+        resourceTarget = assigned as Tombstone | Ruin;
+      } else {
+        resourceTarget = assigned as Resource;
       }
     }
 
     // find the next source of energy from `combineSources` similar to what I did on harvesting when there it not path
     // or implement a wanted logic to circle around the array of sources after we transfere what we found.
 
-    if (target !== null) {
-      withdrowRemains(creep, target);
+    if (resourceTarget !== null) {
+      withdrowRemains(creep, resourceTarget);
     }
-    else if (resourceTarget) {
-      creep.memory.resourceTarget = resourceTarget?.id;
-      let harvestAction = creep.pickup(resourceTarget as Resource);
+    // else if (resourceTarget) {
+    //   creep.memory.resourceTarget = resourceTarget?.id;
+    //   let harvestAction = creep.pickup(resourceTarget as Resource);
 
-      if (harvestAction === ERR_NOT_IN_RANGE) {
-        // creep.say("Moving...");
-        let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
-        if (movingError !== OK) {
-          // debugLog.debug(creep.name, "issue moving");
-          debugLog.warn("move action", movingError)
-          this.cleanUpTargetsState(creep);
-        }
-        // } else if (harvestAction === ERR_INVALID_TARGET) {
-        //   console.log(creep.name + "  Rsc ERR_INVALID_TARGET");
-        // } else if(harvestAction === ERR_NOT_ENOUGH_RESOURCES){
-        //   console.log("not enought energy, change source");
-        //   this.cleanUpTargetsState(creep);
-      } else if (harvestAction !== OK) {
-        debugLog.warn(creep.name + "  Rsc Another error", harvestAction);
-        debugLog.debug("target", creep.memory.resourceTarget);
-        this.cleanUpTargetsState(creep);
-      }
-    } else {
+    //   if (harvestAction === ERR_NOT_IN_RANGE) {
+    //     let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
+    //     if (movingError !== OK) {
+    //       debugLog.warn("move action", movingError)
+    //       this.cleanUpTargetsState(creep);
+    //     }
+    //   } else if (harvestAction !== OK) {
+    //     debugLog.warn(creep.name + "  Rsc Another error", harvestAction);
+    //     debugLog.debug("target", creep.memory.resourceTarget);
+    //     this.cleanUpTargetsState(creep);
+    //   }
+    // }
+    else {
       this.cleanUpTargetsState(creep);
 
     }
@@ -435,7 +427,7 @@ const haulerHandler: RoleHauler = {
         // Find dropped resources near the source
         const droppedResources = room.find(FIND_DROPPED_RESOURCES, {
           filter: resource => resource.resourceType === RESOURCE_ENERGY &&
-                             resource.amount >= 50 &&
+                             resource.amount >= 10 &&
                              resource.pos.findInRange([sourceInfo.source], 3).length > 0
         });
 

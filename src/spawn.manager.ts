@@ -11,6 +11,7 @@ import {
   getCurrentSpawnTier
 } from "./utils/energy-bootstrap";
 import { initializeMemoryHelpers, runConditionalCleanup } from "./utils/memoryHelpers";
+import { MULTI_ROOM_CONFIG } from "./config/multi-room.config";
 
 /**
  * Interface defining the structure for creep counts by role
@@ -311,6 +312,10 @@ export class SpawnManager {
     levelHandler: LevelDefinition,
     enoughCreeps: boolean
   ): CreepRole | null {
+    // Enforce multi-room creep caps when distribution/multi-room is enabled
+    const capHarvesters = MULTI_ROOM_CONFIG.enabled && counts.harvesters >= MULTI_ROOM_CONFIG.maxHarvesters;
+    const capHaulers = MULTI_ROOM_CONFIG.enabled && counts.haulers >= MULTI_ROOM_CONFIG.maxHaulers;
+
     // BOOTSTRAP: If we have zero workforce, prioritize harvester first
     if (counts.harvesters === 0) {
       return "harvester";
@@ -322,12 +327,12 @@ export class SpawnManager {
     }
     // Critical: scale harvesters to minimum after bootstrap
     if (counts.harvesters < levelHandler.harvesters.min) {
-      return "harvester";
+      return capHarvesters ? null : "harvester";
     }
 
     // Critical: scale haulers to minimum after bootstrap
     if (counts.haulers < levelHandler.haulers.min) {
-      return "hauler";
+      return capHaulers ? null : "hauler";
     }
 
     // Important: builders for infrastructure
@@ -347,10 +352,10 @@ export class SpawnManager {
 
     // If we have minimums, scale up if not at max
     if (enoughCreeps) {
-      if (counts.harvesters < levelHandler.harvesters.max) {
+      if (counts.harvesters < levelHandler.harvesters.max && !capHarvesters) {
         return "harvester";
       }
-      if (counts.haulers < levelHandler.haulers.max) {
+      if (counts.haulers < levelHandler.haulers.max && !capHaulers) {
         return "hauler";
       }
       if (counts.builders < levelHandler.builders.max) {

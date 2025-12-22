@@ -16,6 +16,12 @@
 export const ENABLE_MULTI_ROOM = true;
 
 /**
+ * Enable resource distribution/anti-crowding toolkit across harvesters/haulers
+ * When disabled, roles will not run distribution assignments.
+ */
+export const ENABLE_DISTRIBUTION = true;
+
+/**
  * Exploration depth configuration
  * 0 = Current room only (single-room mode)
  * 1 = Adjacent rooms (up, down, left, right)
@@ -266,6 +272,9 @@ export const MULTI_ROOM_CONFIG = {
   minCreepCapacity: MIN_MULTI_ROOM_CREEP_CAPACITY,
   roomTransitionTimeout: ROOM_TRANSITION_TIMEOUT,
   maxFailures: MAX_MULTI_ROOM_FAILURES,
+
+  // Distribution settings
+  useDistribution: ENABLE_DISTRIBUTION,
 
   // Debug settings
   debugEnabled: ENABLE_MULTI_ROOM_DEBUG,

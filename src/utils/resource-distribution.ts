@@ -1,6 +1,6 @@
 /**
  * Resource Distribution and Anti-Crowding System
- * 
+ *
  * This module provides functions to manage creep distribution across resource nodes,
  * prevent overcrowding, and optimize resource collection efficiency.
  */
@@ -43,7 +43,7 @@ export function assignUniqueTargets(creeps: Creep[], sources: Source[]): void {
   if (creeps.length === 0 || sources.length === 0) {
     return;
   }
-  
+
   // Create source assignments
   const sourceAssignments: SourceAssignment[] = sources.map(source => ({
     sourceId: source.id,
@@ -53,24 +53,24 @@ export function assignUniqueTargets(creeps: Creep[], sources: Source[]): void {
     priority: calculateSourcePriority(source, creeps[0].room.name),
     distance: 0 // Will be calculated per creep
   }));
-  
+
   // Sort sources by priority (higher is better)
   sourceAssignments.sort((a, b) => b.priority - a.priority);
-  
+
   // Get current assignments
   const currentAssignments = getCurrentSourceAssignments(creeps);
-  
+
   // Assign creeps to sources
   for (const creep of creeps) {
     const bestSource = findBestSourceForCreep(creep, sourceAssignments, currentAssignments);
     if (bestSource) {
       // Update creep memory
       creep.memory.sourceTarget = bestSource.sourceId;
-      
+
       // Update assignment tracking
       bestSource.assignedCreeps.push(creep.name);
       currentAssignments.set(creep.name, bestSource.sourceId);
-      
+
       if (MULTI_ROOM_CONFIG.debugEnabled) {
         debugLog.debug(`Assigned ${creep.name} to source ${bestSource.sourceId} in ${bestSource.roomName}`);
       }
@@ -97,7 +97,7 @@ export function optimizeHaulerRoutes(haulers: Creep[], sources: Source[]): void 
   if (haulers.length === 0) {
     return;
   }
-  
+
   // Group haulers by their current room
   const haulersByRoom = new Map<string, Creep[]>();
   haulers.forEach(hauler => {
@@ -107,7 +107,7 @@ export function optimizeHaulerRoutes(haulers: Creep[], sources: Source[]): void 
     }
     haulersByRoom.get(roomName)!.push(hauler);
   });
-  
+
   // Optimize routes for each room
   haulersByRoom.forEach((roomHaulers, roomName) => {
     optimizeHaulersInRoom(roomHaulers, roomName, sources);
@@ -122,7 +122,7 @@ export function redistributeOvercrowdedSources(): void {
   if (harvesters.length === 0) {
     return;
   }
-  
+
   // Group harvesters by their target source
   const sourceGroups = new Map<Id<Source>, Creep[]>();
   harvesters.forEach(harvester => {
@@ -134,7 +134,7 @@ export function redistributeOvercrowdedSources(): void {
       sourceGroups.get(targetId)!.push(harvester);
     }
   });
-  
+
   // Find overcrowded sources and redistribute
   sourceGroups.forEach((creeps, sourceId) => {
     if (creeps.length > MULTI_ROOM_CONFIG.maxCreepsPerSource) {
@@ -151,34 +151,34 @@ export function redistributeOvercrowdedSources(): void {
  */
 export function calculateOptimalCreepDistribution(creeps: Creep[], sources: Source[]): Map<Id<Source>, string[]> {
   const distribution = new Map<Id<Source>, string[]>();
-  
+
   if (creeps.length === 0 || sources.length === 0) {
     return distribution;
   }
-  
+
   // Initialize distribution map
   sources.forEach(source => {
     distribution.set(source.id, []);
   });
-  
+
   // Sort creeps by priority (higher capacity first, then by distance to sources)
   const sortedCreeps = [...creeps].sort((a, b) => {
     const capacityDiff = b.store.getCapacity() - a.store.getCapacity();
     if (capacityDiff !== 0) return capacityDiff;
-    
+
     // If same capacity, sort by average distance to sources
     const avgDistanceA = calculateAverageDistanceToSources(a, sources);
     const avgDistanceB = calculateAverageDistanceToSources(b, sources);
     return avgDistanceA - avgDistanceB;
   });
-  
+
   // Distribute creeps using round-robin with priority
   let sourceIndex = 0;
   for (const creep of sortedCreeps) {
     // Find the source with the least assigned creeps
     let bestSource = sources[0];
     let minAssigned = distribution.get(bestSource.id)!.length;
-    
+
     for (const source of sources) {
       const assigned = distribution.get(source.id)!.length;
       if (assigned < minAssigned && assigned < MULTI_ROOM_CONFIG.maxCreepsPerSource) {
@@ -186,12 +186,98 @@ export function calculateOptimalCreepDistribution(creeps: Creep[], sources: Sour
         minAssigned = assigned;
       }
     }
-    
+
     // Assign creep to best source
     distribution.get(bestSource.id)!.push(creep.name);
   }
-  
+
   return distribution;
+}
+
+/**
+ * Assigns unique collection targets (tombstones/ruins/dropped energy) to haulers
+ * respecting max creeps per target and prioritizing higher energy amounts.
+ */
+export function assignCollectionTargetsToHaulers(
+  haulers: Creep[],
+  targets: Array<Resource | Tombstone | Ruin>
+): void {
+  if (haulers.length === 0 || targets.length === 0) {
+    return;
+  }
+
+  const maxPerTarget = MULTI_ROOM_CONFIG.maxCreepsPerSource;
+
+  const targetInfos = targets.map(t => ({
+    id: t.id,
+    roomName: t?.room?.name,
+    energy: getAvailableEnergy(t),
+    assigned: [] as string[]
+  })).filter(t => t.energy > 0);
+
+  // Sort by available energy (desc)
+  targetInfos.sort((a, b) => b.energy - a.energy);
+
+  const currentAssignments = new Map<string, string>();
+  haulers.forEach(h => {
+    if (h.memory.resourceTarget) {
+      currentAssignments.set(h.name, h.memory.resourceTarget);
+    }
+  });
+
+  // Prefer keeping existing assignments if capacity remains
+  const findExisting = (hauler: Creep) => {
+    const existing = currentAssignments.get(hauler.name);
+    if (!existing) return null;
+    const info = targetInfos.find(t => t.id === existing);
+    if (info && info.assigned.length < maxPerTarget) {
+      return info;
+    }
+    return null;
+  };
+
+  const findBest = (hauler: Creep) => {
+    let best = null as typeof targetInfos[number] | null;
+    for (const info of targetInfos) {
+      if (info.assigned.length >= maxPerTarget) continue;
+      if (!best) {
+        best = info;
+        continue;
+      }
+      // Prefer higher energy, then lower load
+      if (info.energy > best.energy) {
+        best = info;
+      } else if (info.energy === best.energy && info.assigned.length < best.assigned.length) {
+        best = info;
+      }
+    }
+    return best;
+  };
+
+  // Assign haulers (higher capacity first)
+  const sortedHaulers = [...haulers].sort((a, b) => b.store.getCapacity() - a.store.getCapacity());
+  for (const hauler of sortedHaulers) {
+    const chosen = findExisting(hauler) || findBest(hauler);
+    if (chosen) {
+      hauler.memory.resourceTarget = chosen.id;
+      chosen.assigned.push(hauler.name);
+      if (MULTI_ROOM_CONFIG.debugEnabled) {
+        debugLog.debug(`Hauler ${hauler.name} assigned to collection ${chosen.id} (${chosen.energy})`);
+      }
+    } else {
+      hauler.memory.resourceTarget = undefined;
+    }
+  }
+}
+
+function getAvailableEnergy(target: Resource | Tombstone | Ruin): number {
+  if ('amount' in target) {
+    return target.amount;
+  }
+  if ('store' in target) {
+    return target.store.getUsedCapacity(RESOURCE_ENERGY) || 0;
+  }
+  return 0;
 }
 
 // ============================================================================
@@ -203,16 +289,16 @@ export function calculateOptimalCreepDistribution(creeps: Creep[], sources: Sour
  */
 function calculateSourcePriority(source: Source, homeRoom: string): number {
   let priority = 100; // Base priority
-  
+
   // Energy amount bonus
   const energyRatio = source.energy / source.energyCapacity;
   priority *= (0.5 + energyRatio * 0.5);
-  
+
   // Distance penalty
   const distance = Game.map.getRoomLinearDistance(homeRoom, source.room.name);
   const distanceMultiplier = MULTI_ROOM_CONFIG.distancePriorityMultiplier[distance as keyof typeof MULTI_ROOM_CONFIG.distancePriorityMultiplier] || 0.2;
   priority *= distanceMultiplier;
-  
+
   return Math.round(priority);
 }
 
@@ -221,13 +307,13 @@ function calculateSourcePriority(source: Source, homeRoom: string): number {
  */
 function getCurrentSourceAssignments(creeps: Creep[]): Map<string, Id<Source>> {
   const assignments = new Map<string, Id<Source>>();
-  
+
   creeps.forEach(creep => {
     if (creep.memory.sourceTarget) {
       assignments.set(creep.name, creep.memory.sourceTarget);
     }
   });
-  
+
   return assignments;
 }
 
@@ -235,8 +321,8 @@ function getCurrentSourceAssignments(creeps: Creep[]): Map<string, Id<Source>> {
  * Finds the best source for a specific creep
  */
 function findBestSourceForCreep(
-  creep: Creep, 
-  sourceAssignments: SourceAssignment[], 
+  creep: Creep,
+  sourceAssignments: SourceAssignment[],
   currentAssignments: Map<string, Id<Source>>
 ): SourceAssignment | null {
   // Check if creep already has a good assignment
@@ -247,7 +333,7 @@ function findBestSourceForCreep(
       return currentAssignment;
     }
   }
-  
+
   // Find best available source
   for (const sourceAssignment of sourceAssignments) {
     if (sourceAssignment.assignedCreeps.length < sourceAssignment.maxCreeps) {
@@ -259,7 +345,7 @@ function findBestSourceForCreep(
       }
     }
   }
-  
+
   return null;
 }
 
@@ -272,12 +358,12 @@ function optimizeHaulersInRoom(haulers: Creep[], roomName: string, sources: Sour
   if (roomSources.length === 0) {
     return;
   }
-  
+
   // Assign haulers to different areas around sources
   haulers.forEach((hauler, index) => {
     const targetSourceIndex = index % roomSources.length;
     const targetSource = roomSources[targetSourceIndex];
-    
+
     // Store preferred collection area in memory
     if (!hauler.memory.multiRoom) {
       hauler.memory.multiRoom = {
@@ -287,10 +373,10 @@ function optimizeHaulersInRoom(haulers: Creep[], roomName: string, sources: Sour
         failureCount: 0
       };
     }
-    
+
     // Set collection preference
     hauler.memory.preferredCollectionSource = targetSource.id;
-    
+
     if (MULTI_ROOM_CONFIG.debugEnabled) {
       debugLog.debug(`Optimized route for ${hauler.name} to focus on source ${targetSource.id}`);
     }
@@ -306,21 +392,21 @@ function redistributeCreepsFromSource(creeps: Creep[], sourceId: Id<Source>): vo
   if (!source) {
     return;
   }
-  
+
   const sortedCreeps = creeps.sort((a, b) => {
     const distanceA = a.pos.getRangeTo(source);
     const distanceB = b.pos.getRangeTo(source);
     return distanceB - distanceA; // Farthest first
   });
-  
+
   // Keep only the allowed number of creeps
   const excessCreeps = sortedCreeps.slice(MULTI_ROOM_CONFIG.maxCreepsPerSource);
-  
+
   // Clear targets for excess creeps so they find new sources
   excessCreeps.forEach(creep => {
     creep.memory.sourceTarget = undefined;
     creep.memory.prevSourceTarget = sourceId;
-    
+
     if (MULTI_ROOM_CONFIG.debugEnabled) {
       debugLog.debug(`Redistributed ${creep.name} from overcrowded source ${sourceId}`);
     }
@@ -334,10 +420,10 @@ function calculateAverageDistanceToSources(creep: Creep, sources: Source[]): num
   if (sources.length === 0) {
     return 0;
   }
-  
+
   const totalDistance = sources.reduce((sum, source) => {
     return sum + creep.pos.getRangeTo(source);
   }, 0);
-  
+
   return totalDistance / sources.length;
 }

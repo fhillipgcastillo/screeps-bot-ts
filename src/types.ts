@@ -95,6 +95,9 @@ export interface HarvesterMemory extends BaseCreepMemory {
     sourceTargetId?: Id<Source>;
     lastStep?: boolean;
 
+    // Distribution preferences
+    preferredSourceId?: Id<Source>;
+
     // Multi-room specific properties
     multiRoom?: {
         enabled: boolean;
@@ -114,6 +117,9 @@ export interface HarvesterMemory extends BaseCreepMemory {
 export interface HaulerMemory extends BaseCreepMemory {
     role: "hauler";
     // Haulers use the common transfering and haulering flags
+
+    // Distribution preferences
+    preferredCollectionSource?: Id<Source>;
 
     // Multi-room specific properties
     multiRoom?: {

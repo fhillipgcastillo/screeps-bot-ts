@@ -6,6 +6,8 @@ import { debugLog } from './utils/Logger';
 import { shouldMigrateToNewSource, scoreSourceProfitability } from './utils/sourceProfiler';
 import { isMultiRoomEnabled } from './utils/consoleCommands';
 import { shouldClaimRoom, claimRoom } from './utils/roomClaiming';
+import { assignUniqueTargets } from './utils/resource-distribution';
+import { getCreepsByRole } from './types';
 
 type RoleHarvester = {
     run: (creep: Creep) => void,
@@ -46,6 +48,35 @@ const roleHarvester: RoleHarvester = {
         return _.find(sources, (source) => _.isEqual(source.id, creep.memory.sourceTarget));
     },
     newLogicSourceTarget: function (creep) {
+        this.initializeMultiRoomMemory(creep);
+
+        // Distribution-first targeting when enabled
+        if (MULTI_ROOM_CONFIG.useDistribution) {
+            const homeRoom = creep.memory.multiRoom?.homeRoom || creep.room.name;
+            const harvesters = getCreepsByRole('harvester').filter(h => (h.memory.multiRoom?.homeRoom || h.room.name) === homeRoom);
+
+            // Determine candidate sources (multi-room if allowed)
+            let sources: Source[] = [];
+            if (this.shouldUseMultiRoom(creep)) {
+                const multiRoomSources = findMultiRoomSources(homeRoom);
+                sources = multiRoomSources.map(s => s.source);
+            } else {
+                sources = creep.room.find(FIND_SOURCES);
+            }
+
+            if (sources.length === 0 || harvesters.length === 0) {
+                this.cleanUpTargetsState(creep);
+                return null;
+            }
+
+            assignUniqueTargets(harvesters, sources);
+            const assigned = creep.memory.sourceTarget ? Game.getObjectById(creep.memory.sourceTarget as Id<Source>) : null;
+            if (!assigned && MULTI_ROOM_CONFIG.debugEnabled) {
+                debugLog.warn(`${creep.name} distribution assignment failed`);
+            }
+            return assigned;
+        }
+
         // Initialize multi-room memory
         this.initializeMultiRoomMemory(creep);
 
