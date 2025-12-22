@@ -6,7 +6,7 @@ export class ErrorMapper {
   private static _consumer?: SourceMapConsumer;
 
   public static get consumer(): SourceMapConsumer {
-    if (this._consumer == null) {
+    if (this._consumer === null) {
       this._consumer = new SourceMapConsumer(require("main.js.map"));
     }
 

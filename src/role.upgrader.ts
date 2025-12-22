@@ -83,13 +83,13 @@ const roleUpgrader: RoleHauler = {
             // Round-robin assignment for extensions
             let theExtension = getNextResourceTarget(creep.room, 'upgrader', extensions) as StructureExtension;
 
-            if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
         } else {
             // Fallback to spawn
             let spawn = Game.spawns.Spawn1;
-            if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+            if (creep.withdraw(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
                 creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
             }
         }
@@ -104,7 +104,7 @@ const roleUpgrader: RoleHauler = {
         //     if (resourceTarget) {
         //         var harvestAction = creep.pickup(resourceTarget);
 
-        //         if (harvestAction == ERR_NOT_IN_RANGE) {
+        //         if (harvestAction === ERR_NOT_IN_RANGE) {
         //             // creep.say("Moving...");
         //             let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
         //             if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {

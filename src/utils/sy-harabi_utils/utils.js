@@ -379,7 +379,7 @@ function getDFS(nodeNow, exit, capacityMap, levels, maxFlow, checkIndex) {
   ) {
     const edge = adjacentsEdges[checkIndex[nodeNow]];
     const nextNode = getEdgeEndNode(edge);
-    if (capacityMap[edge] && levels[nextNode] - levels[nodeNow] == 1) {
+    if (capacityMap[edge] && levels[nextNode] - levels[nodeNow] === 1) {
       let newMaxFlow = getDFS(
         nextNode,
         exit,

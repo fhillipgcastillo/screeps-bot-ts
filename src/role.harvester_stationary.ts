@@ -136,7 +136,7 @@ const roleHarvester: RoleHarvester = {
             if (sourceTarget) {
                 var harvestAction = creep.harvest(sourceTarget);
 
-                if (harvestAction == ERR_NOT_IN_RANGE) {
+                if (harvestAction === ERR_NOT_IN_RANGE) {
                     // creep.say("Moving...");
                     let movingError = creep.moveTo(sourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
                     if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
@@ -181,7 +181,7 @@ const roleHarvester: RoleHarvester = {
 
         creep.memory.sourceTarget = nextClosestTaret.id;
 
-        // if (creep.harvest(nextClosestTaret) == ERR_NOT_IN_RANGE) {
+        // if (creep.harvest(nextClosestTaret) === ERR_NOT_IN_RANGE) {
         //     creep.moveTo(nextClosestTaret, { visualizePathStyle: { stroke: '#ffaa00' } });
         // }
     },
@@ -299,7 +299,7 @@ const roleHarvester: RoleHarvester = {
             // Filter out sources that are already being targeted by other creeps
             const availableSources = multiRoomSources.filter(sourceInfo => {
                 const creepsNearSource = sourceInfo.source.pos.findInRange(FIND_MY_CREEPS, 1);
-                return creepsNearSource.length < MULTI_ROOM_CONFIG.maxCreepsPerSource;
+                return creepsNearSource.length <= MULTI_ROOM_CONFIG.maxCreepsPerSource;
             });
 
             if (availableSources.length === 0) {

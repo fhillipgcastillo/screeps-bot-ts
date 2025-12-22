@@ -29,13 +29,13 @@ export const calculateBodyWeight = (bodyParts: BodyWeight[]) => {
 };
 
 export const makeAllHaulersTransfer = () => {
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler').forEach(h => {
+    _.filter(Game.creeps, (creep) => creep.memory.role === 'hauler').forEach(h => {
         h.memory.haulering = false;
         h.memory.transfering = true;
     })
 }
 export const makeAllHaulersChangeSource = () => {
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler').forEach(h => { h.memory.sourceTarget = undefined; h.memory.transfering = false; })
+    _.filter(Game.creeps, (creep) => creep.memory.role === 'hauler').forEach(h => { h.memory.sourceTarget = undefined; h.memory.transfering = false; })
 }
 
 declare global {
@@ -44,23 +44,23 @@ declare global {
 }
 
 export const makeAllHarvesterChangeSource = () => {
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester').forEach(h => { h.memory.sourceTarget = undefined })
+    _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester').forEach(h => { h.memory.sourceTarget = undefined })
 }
 
 function others() {
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'hauler').forEach(h => {
+    _.filter(Game.creeps, (creep) => creep.memory.role === 'hauler').forEach(h => {
         h.memory.prevTargets = undefined;
     })
 
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'harvester').forEach(h => {
+    _.filter(Game.creeps, (creep) => creep.memory.role === 'harvester').forEach(h => {
         h.memory.prevTargets = undefined;
     })
 
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'upgrader').forEach(h => {
+    _.filter(Game.creeps, (creep) => creep.memory.role === 'upgrader').forEach(h => {
         h.memory.upgrading = false;
     })
     //  reset the builders
-    _.filter(Game.creeps, (creep) => creep.memory.role == 'builder').forEach(h => {
+    _.filter(Game.creeps, (creep) => creep.memory.role === 'builder').forEach(h => {
         h.memory.harvesting = false;
         h.memory.building = true;
     })

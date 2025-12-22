@@ -40,7 +40,7 @@ function withdrowRemains(creep: Creep, target: any) {
   creep.memory.resourceTarget = undefined;
   let withdrowAction = creep.withdraw(target, RESOURCE_ENERGY);
 
-  if (withdrowAction == ERR_NOT_IN_RANGE) {
+  if (withdrowAction === ERR_NOT_IN_RANGE) {
     // creep.say("Moving...");
     let movingError = creep.moveTo(target, { visualizePathStyle: { stroke: '#ff6600' } });
     if (movingError !== OK) {
@@ -155,7 +155,7 @@ const haulerHandler: RoleHauler = {
       creep.memory.resourceTarget = resourceTarget?.id;
       let harvestAction = creep.pickup(resourceTarget as Resource);
 
-      if (harvestAction == ERR_NOT_IN_RANGE) {
+      if (harvestAction === ERR_NOT_IN_RANGE) {
         // creep.say("Moving...");
         let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
         if (movingError !== OK) {
@@ -248,13 +248,13 @@ const haulerHandler: RoleHauler = {
 
     // Find all extensions in the room to check total count
     const allExtensions = creep.room.find(FIND_STRUCTURES, {
-      filter: (structure) => structure.structureType == STRUCTURE_EXTENSION
+      filter: (structure) => structure.structureType === STRUCTURE_EXTENSION
     });
 
     // Find extensions with free capacity
     const emptyExtensions = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
-        return structure.structureType == STRUCTURE_EXTENSION &&
+        return structure.structureType === STRUCTURE_EXTENSION &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
       }
     });
@@ -262,7 +262,7 @@ const haulerHandler: RoleHauler = {
     // Find spawns with free capacity
     const emptySpawns = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
-        return structure.structureType == STRUCTURE_SPAWN &&
+        return structure.structureType === STRUCTURE_SPAWN &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
       }
     });
@@ -270,7 +270,7 @@ const haulerHandler: RoleHauler = {
     // Find towers with free capacity
     const emptyTowers = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
-        return structure.structureType == STRUCTURE_TOWER &&
+        return structure.structureType === STRUCTURE_TOWER &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
       }
     });
@@ -278,7 +278,7 @@ const haulerHandler: RoleHauler = {
     // Find storage structures with free capacity
     const emptyStorage = creep.room.find(FIND_STRUCTURES, {
       filter: (structure) => {
-        return structure.structureType == STRUCTURE_STORAGE &&
+        return structure.structureType === STRUCTURE_STORAGE &&
           structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
       }
     });
@@ -319,7 +319,7 @@ const haulerHandler: RoleHauler = {
       // Fallback: if 2 or fewer extensions, still fill them
       targets = emptyExtensions;
     }
-
+    // console.log("Hauler targets", JSON.stringify(targets));
     if (targets && targets.length > 0) {
       let target = creep.pos.findClosestByRange(targets);
       if (target) {

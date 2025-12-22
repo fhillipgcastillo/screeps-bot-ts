@@ -8,14 +8,14 @@ function run(creep:Creep): void {
         // creep.say("Enemy found");
         let enemyTarget = enemiesInRoom[0]
 
-        if (attackOrMove(creep, enemyTarget) == ERR_INVALID_TARGET) {
+        if (attackOrMove(creep, enemyTarget) === ERR_INVALID_TARGET) {
             let newTargets = _.filter(enemiesInRoom, (en) => en.id !== enemyTarget.id);
             attackOrMove(creep, newTargets[0])
         }
     } else if(enemyStructures.length > 0) {
         let enemyTarget = enemyStructures[0]
 
-        if (attackOrMove(creep, enemyTarget) == ERR_INVALID_TARGET) {
+        if (attackOrMove(creep, enemyTarget) === ERR_INVALID_TARGET) {
             let newTargets = _.filter(enemyStructures, (en) => en.id !== enemyTarget.id);
             attackOrMove(creep, newTargets[0])
         }
@@ -26,7 +26,7 @@ function run(creep:Creep): void {
 }
 function attackOrMove(creep:Creep, target: Creep | AnyStructure) {
     let enemyInRange = creep.attack(target);
-    if (enemyInRange == ERR_NOT_IN_RANGE) {
+    if (enemyInRange === ERR_NOT_IN_RANGE) {
         creep.moveTo(target, { visualizePathStyle: { stroke: "#ee0000" } })
     }
     return enemyInRange;

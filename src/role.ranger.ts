@@ -9,7 +9,7 @@ function run(creep: Creep) {
         let enemyTarget = enemiesInRoom[0]
 
         const attackAction = attackOrMove(creep, enemyTarget);
-        if (attackAction == ERR_INVALID_TARGET) {
+        if (attackAction === ERR_INVALID_TARGET) {
             let newTargets = _.filter(enemiesInRoom, (en) => en.id !== enemyTarget.id);
             attackOrMove(creep, newTargets[0])
         }
@@ -17,7 +17,7 @@ function run(creep: Creep) {
         let enemyTarget = enemyStructures[0]
 
         const attackAction = attackOrMove(creep, enemyTarget);
-        if (attackAction == ERR_INVALID_TARGET) {
+        if (attackAction === ERR_INVALID_TARGET) {
             let newTargets = _.filter(enemyStructures, (en) => en.id !== enemyTarget.id);
             attackOrMove(creep, newTargets[0])
         }
@@ -27,7 +27,7 @@ function run(creep: Creep) {
 function attackOrMove(creep: Creep, target: Creep | AnyStructure) {
     let enemyInRange = creep.rangedAttack(target);
 
-    if (enemyInRange == ERR_NOT_IN_RANGE) {
+    if (enemyInRange === ERR_NOT_IN_RANGE) {
         // creep.say("Mv2Etgt ");
         const moveAction = creep.moveTo(target, { visualizePathStyle: { stroke: "#ee0000" } })
         debugLog.debug(creep.name, "move action "+moveAction);
