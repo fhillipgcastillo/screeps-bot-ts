@@ -302,7 +302,7 @@ export class SpawnManager {
     const spawnRole = this.getPrioritySpawnRole(creepCounts, levelHandler, enoughCreeps);
 
     if (!spawnRole) {
-      console.log(`[Initial] No priority role to spawn, creeps sufficient`);
+      console.log(`[Initial] No priority role to spawn, creeps sufficient`, forceEmergency, );
       return;
     }
 
@@ -359,12 +359,12 @@ export class SpawnManager {
       return "hauler";
     }
     // Critical: scale harvesters to minimum after bootstrap
-    if (counts.harvesters < levelHandler.harvesters.min) {
+    if (counts.harvesters <= levelHandler.harvesters.min) {
       return capHarvesters ? null : "harvester";
     }
 
     // Critical: scale haulers to minimum after bootstrap
-    if (counts.haulers < levelHandler.haulers.min) {
+    if (counts.haulers <= levelHandler.haulers.min) {
       return capHaulers ? null : "hauler";
     }
 

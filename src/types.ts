@@ -171,7 +171,6 @@ export interface RangerMemory extends BaseCreepMemory {
  */
 export interface ExplorerMemory extends BaseCreepMemory {
     role: "explorer";
-    nextRole?: CreepRole;
 
     // Exploration state
     targetRoom?: string;           // Room currently being explored

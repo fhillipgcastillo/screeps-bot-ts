@@ -11,15 +11,15 @@
 
 ## Migration Status Overview
 
-| File                           | Complexity | Status        | Assignee | Notes                                                            |
-| ------------------------------ | ---------- | ------------- | -------- | ---------------------------------------------------------------- |
-| `role.defender.ts`             | Simple     | � Complete    | -        | Migrated to class, hardcoded ref removed                         |
-| `role.ranger.ts`               | Simple     | 🟢 Complete    | -        | Migrated to class, hardcoded ref removed                         |
-| `role.upgrader.ts`             | Simple     | 🟢 Complete    | -        | Migrated to class, type mismatch fixed, commented code removed   |
-| `role.builder.ts`              | Moderate   | � Complete    | -        | Migrated to class, commented code removed, hardcoded ref removed |
-| `role.explorer.ts`             | Moderate   | 🟢 Complete    | -        | Migrated to class, export standardized, multi-state preserved    |
-| `role.harvester_stationary.ts` | Complex    | � Complete    | -        | Migrated to class, multi-room logic preserved, 484→558 lines     |
-| `role.hauler.ts`               | Complex    | 🟢 Complete    | -        | Migrated to class, dual-phase state preserved, 611→556 lines     |
+| File                           | Complexity | Status     | Assignee | Notes                                                            |
+| ------------------------------ | ---------- | ---------- | -------- | ---------------------------------------------------------------- |
+| `role.defender.ts`             | Simple     | � Complete | -        | Migrated to class, hardcoded ref removed                         |
+| `role.ranger.ts`               | Simple     | 🟢 Complete | -        | Migrated to class, hardcoded ref removed                         |
+| `role.upgrader.ts`             | Simple     | 🟢 Complete | -        | Migrated to class, type mismatch fixed, commented code removed   |
+| `role.builder.ts`              | Moderate   | � Complete | -        | Migrated to class, commented code removed, hardcoded ref removed |
+| `role.explorer.ts`             | Moderate   | 🟢 Complete | -        | Migrated to class, export standardized, multi-state preserved    |
+| `role.harvester_stationary.ts` | Complex    | � Complete | -        | Migrated to class, multi-room logic preserved, 484→558 lines     |
+| `role.hauler.ts`               | Complex    | 🟢 Complete | -        | Migrated to class, dual-phase state preserved, 611→556 lines     |
 
 **Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⚠️ Blocked
 

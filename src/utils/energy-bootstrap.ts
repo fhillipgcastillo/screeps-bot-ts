@@ -55,14 +55,22 @@ export interface SpawnResult {
  * Reserve = allows safe spawning + maintains minimum buffer for room sustainability
  */
 export const ENERGY_RESERVE_THRESHOLDS: { [level: number]: number } = {
-  1: 50,    // Level 1: Emergency spawning (200) + 50 buffer = can spawn at 250
-  2: 100,   // Level 2: Transitioning to NORMAL (360) + 100 buffer = can spawn at 460
-  3: 150,   // Level 3: NORMAL tier (360) + 150 buffer = can spawn at 510
-  4: 200,   // Level 4: Early ADVANCED (640) + 200 buffer = can spawn at 840
-  5: 250,   // Level 5: ADVANCED tier (650) + 250 buffer = can spawn at 900
-  6: 300,   // Level 6: Full ADVANCED (650) + 300 buffer = can spawn at 950
-  7: 350,   // Level 7: Expansion phase (650) + 350 buffer = can spawn at 1000+
-  8: 400    // Level 8: Peak economy (650) + 400 buffer = maximum safety
+  // 1: 50,    // Level 1: Emergency spawning (200) + 50 buffer = can spawn at 250
+  // 2: 100,   // Level 2: Transitioning to NORMAL (360) + 100 buffer = can spawn at 460
+  // 3: 150,   // Level 3: NORMAL tier (360) + 150 buffer = can spawn at 510
+  // 4: 200,   // Level 4: Early ADVANCED (640) + 200 buffer = can spawn at 840
+  // 5: 250,   // Level 5: ADVANCED tier (650) + 250 buffer = can spawn at 900
+  // 6: 300,   // Level 6: Full ADVANCED (650) + 300 buffer = can spawn at 950
+  // 7: 350,   // Level 7: Expansion phase (650) + 350 buffer = can spawn at 1000+
+  // 8: 400    // Level 8: Peak economy (650) + 400 buffer = maximum safety
+  1: 0,
+  2: 0,
+  3: 0,
+  4: 0,
+  5: 0,
+  6: 0,
+  7: 0,
+  8: 0
 };
 
 /**
@@ -361,7 +369,7 @@ export function canSafelySpawn(
   template: SpawnTemplate,
   controllerLevel: number
 ): boolean {
-  const availableEnergy = spawn.store[RESOURCE_ENERGY];
+  const availableEnergy = spawn.room.energyAvailable;
 
   // Emergency tier bypasses energy reserves for fast recovery
   if (template.tier === SpawnTier.EMERGENCY) {
@@ -382,7 +390,7 @@ export function canSafelySpawn(
  * @returns True if in recovery mode
  */
 export function isInRecoveryMode(spawn: StructureSpawn, activeHarvesters: number = 0): boolean {
-  const energyRatio = spawn.store[RESOURCE_ENERGY] / spawn.store.getCapacity(RESOURCE_ENERGY);
+  const energyRatio = spawn.room.energyAvailable / spawn.room.energyCapacityAvailable;
   return energyRatio < 0.3 && activeHarvesters === 0;
 }
 

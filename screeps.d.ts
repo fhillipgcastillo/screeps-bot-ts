@@ -50,7 +50,6 @@ declare global {
     lastStep?: boolean; // For harvesters
     buildTarget?: Id<ConstructionSite>; // For builders
     prevBuildTarget?: Id<ConstructionSite>; // For builders
-    nextRole?: CreepRole; // For explorers
 
     // Index signature for additional properties
     [name: string]: any;
@@ -70,7 +69,7 @@ declare global {
       spawnUpgrader: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
       spawnDefender: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
       spawnRanger: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
-      spawnExplorer: (spawnName?: string, customBody?: BodyPartConstant[], nextRole?: CreepRole) => SpawnResult;
+      spawnExplorer: (spawnName?: string, customBody?: BodyPartConstant[]) => SpawnResult;
 
       // Spawn Status and Information Functions
       getSpawnStatus: (spawnName: string) => SpawnStatus | null;
@@ -103,6 +102,9 @@ declare global {
       disableDebug: () => void;
       toggleDebug: () => void;
       isDebugEnabled: () => boolean;
+
+      // Instance Cache Diagnostic Functions - accessible from game console
+      getCreepInstanceStats: () => { totalInstances: number; instancesByRole: Record<CreepRole, number> };
 
       // Spawn Pause/Resume Functions - accessible from game console
       pauseSpawning: () => void;

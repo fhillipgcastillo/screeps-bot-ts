@@ -1,20 +1,22 @@
 import SpawnManager from "./spawn.manager";
 import { ManualSpawner, getManualSpawner } from "./manual.spawner";
-import roleHarvester from "./role.harvester_stationary";
-import roleHauler from "./role.hauler";
-import roleUpgrader from "./role.upgrader";
-import roleBuilder from "./role.builder";
-import roleExplorer from "./role.explorer";
-import roleDefender from "role.defender";
-import roleRanger from "role.ranger";
-import { CreepRoleEnum, isValidCreepRole } from "./types";
+import { HarvesterCreep } from "./role.harvester_stationary";
+import { HaulerCreep } from "./role.hauler";
+import { UpgraderCreep } from "./role.upgrader";
+import { BuilderCreep } from "./role.builder";
+import { ExplorerCreep } from "./role.explorer";
+import { DefenderCreep } from "./role.defender";
+import { RangerCreep } from "./role.ranger";
+import { CreepRoleEnum, isValidCreepRole, SmartCreep, CreepRole } from "./types";
 import { updateVisualOverlay } from "./ui";
-import { logger, debugLog } from "./utils/Logger";
+import { Logger, debugLog } from "./utils/Logger";
 import { MULTI_ROOM_CONFIG, validateMultiRoomConfig } from "./config/multi-room.config";
 import { cleanupRoomCaches, updateRoomSafetyCache } from "./utils/room-safety";
 import { clearResourceCache, updateResourceDiscoveryCache } from "./utils/multi-room-resources";
 import { logPerformanceStats, monitorMultiRoomPerformance } from "./utils/multi-room-debug";
 
+// this avoid multiple logger instances
+const logger = Logger.getInstance();
 
 export class GameManager {
   private gameState: string;
@@ -22,6 +24,7 @@ export class GameManager {
   private debug: boolean = false;
   private activeCreeps: Creep[] = [];
   private activeSpawns: StructureSpawn[] = [];
+  private creepInstances: Map<string, SmartCreep> = new Map();
   public spawnManager: SpawnManager;
   public manualSpawner: ManualSpawner;
 
@@ -165,6 +168,35 @@ export class GameManager {
       }
     }
   }
+
+  /**
+   * Factory method to create role-specific creep instances
+   * @param creep - The creep to create an instance for
+   * @returns New SmartCreep instance for the creep's role
+   */
+  private createCreepInstance(creep: Creep): SmartCreep {
+    switch (creep.memory.role) {
+      case CreepRoleEnum.HARVESTER:
+        return new HarvesterCreep(creep);
+      case CreepRoleEnum.HAULER:
+        return new HaulerCreep(creep);
+      case CreepRoleEnum.UPGRADER:
+        return new UpgraderCreep(creep);
+      case CreepRoleEnum.BUILDER:
+        return new BuilderCreep(creep);
+      case CreepRoleEnum.DEFENDER:
+        return new DefenderCreep(creep);
+      case CreepRoleEnum.RANGER:
+        return new RangerCreep(creep);
+      case CreepRoleEnum.EXPLORER:
+        return new ExplorerCreep(creep);
+      default:
+        logger.error(`Cannot create instance for unknown role: ${creep.memory.role}`);
+        // Fallback to base SmartCreep
+        return new SmartCreep(creep);
+    }
+  }
+
   runCreep(creep: Creep, spawn: StructureSpawn): void {
     // Validate that the creep has a valid role
     if (!isValidCreepRole(creep.memory.role)) {
@@ -172,40 +204,39 @@ export class GameManager {
       return;
     }
 
-    switch (creep.memory.role) {
-      case CreepRoleEnum.HARVESTER:
-        roleHarvester.run(creep);
-        break;
-      case CreepRoleEnum.HAULER:
-        roleHauler.run(creep);
-        break;
-      case CreepRoleEnum.UPGRADER:
-        roleUpgrader.run(creep);
-        break;
-      case CreepRoleEnum.BUILDER:
-        roleBuilder.run(creep);
-        break;
-      case CreepRoleEnum.DEFENDER:
-        roleDefender.run(creep);
-        break;
-      case CreepRoleEnum.RANGER:
-        roleRanger.run(creep);
-        break;
-      case CreepRoleEnum.EXPLORER:
-        roleExplorer.run(creep);
-        break;
-      default:
-        // This should never happen due to the type guard above, but keeping for safety
-        logger.error(`Unknown role: ${creep.memory.role}`);
+    // Get or create cached instance for this creep
+    let instance = this.creepInstances.get(creep.name);
+    if (!instance) {
+      instance = this.createCreepInstance(creep);
+      this.creepInstances.set(creep.name, instance);
+      debugLog.debug(`Created new instance for ${creep.name} (${creep.memory.role})`);
     }
+
+    // Execute role behavior using cached instance
+    instance.run();
   }
   cleanUpMemory() {
-    // Clean up dead creep memory
+    // Clean up dead creep memory and cached instances
     for (var creepName in Memory.creeps) {
       if (!Game.creeps[creepName]) {
         delete Memory.creeps[creepName];
+        this.creepInstances.delete(creepName);
         logger.debug('Clearing non-existing creep memory:', creepName);
       }
+    }
+
+    // Orphan cleanup: remove cached instances for non-existent creeps every 25 ticks
+    if (Game.time % 25 === 0) {
+      const orphanedInstances: string[] = [];
+      this.creepInstances.forEach((instance, creepName) => {
+        if (!Game.creeps[creepName]) {
+          orphanedInstances.push(creepName);
+        }
+      });
+      orphanedInstances.forEach(name => {
+        this.creepInstances.delete(name);
+        debugLog.debug(`Removed orphaned instance: ${name}`);
+      });
     }
 
     // Clean up multi-room memory periodically
@@ -408,6 +439,34 @@ export class GameManager {
    */
   public getLogger() {
     return logger;
+  }
+
+  /**
+   * Get diagnostic statistics about cached creep instances
+   * @returns Object with total instances and breakdown by role
+   */
+  public getInstanceCacheStats(): { totalInstances: number; instancesByRole: Record<CreepRole, number> } {
+    const stats: { totalInstances: number; instancesByRole: Record<CreepRole, number> } = {
+      totalInstances: this.creepInstances.size,
+      instancesByRole: {
+        harvester: 0,
+        hauler: 0,
+        builder: 0,
+        upgrader: 0,
+        defender: 0,
+        ranger: 0,
+        explorer: 0
+      }
+    };
+
+    this.creepInstances.forEach((instance) => {
+      const role = instance.memory.role;
+      if (role in stats.instancesByRole) {
+        stats.instancesByRole[role]++;
+      }
+    });
+
+    return stats;
   }
 }
 

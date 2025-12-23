@@ -553,6 +553,9 @@ class HaulerCreep extends SmartCreep {
     }
 }
 
+// Export the class for instance caching
+export { HaulerCreep };
+
 /**
  * Factory export for hauler role
  */

@@ -427,6 +427,9 @@ class HarvesterCreep extends SmartCreep {
     }
 }
 
+// Export the class for instance caching
+export { HarvesterCreep };
+
 /**
  * Factory export for harvester role
  */

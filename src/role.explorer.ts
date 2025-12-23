@@ -131,7 +131,9 @@ class ExplorerCreep extends SmartCreep {
     const nextRoom = this.getNextRoomToExplore();
     if (!nextRoom) {
       this.memory.explorationComplete = true;
-      debugLog.debug(`[EXPLORER] ${this.creep.name} completed exploration around ${this.memory.homeRoom}`);
+      debugLog.debug(`[EXPLORER] ${this.creep.name} completed exploration around ${this.memory.homeRoom}, suiciding`);
+      // Explorer completed exploration - suicide to free up population
+      this.creep.suicide();
       return;
     }
 
@@ -283,6 +285,9 @@ class ExplorerCreep extends SmartCreep {
     return Object.values(exits);
   }
 }
+
+// Export the class for instance caching
+export { ExplorerCreep };
 
 /**
  * Factory export for backward compatibility with existing GameManager

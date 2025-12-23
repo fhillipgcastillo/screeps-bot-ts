@@ -100,6 +100,9 @@ class DefenderCreep extends SmartCreep {
   }
 }
 
+// Export the class for instance caching
+export { DefenderCreep };
+
 /**
  * Factory function for creating defender instances
  * Maintains compatibility with current GameManager pattern

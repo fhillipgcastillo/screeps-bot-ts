@@ -166,6 +166,9 @@ global.disableDebug = () => gm.disableDebug();
 global.toggleDebug = () => gm.toggleDebug();
 global.isDebugEnabled = () => gm.isDebugEnabled();
 
+// Assign instance cache diagnostic function to global
+global.getCreepInstanceStats = () => gm.getInstanceCacheStats();
+
 // Assign spawning pause/resume functions to global for console access
 global.pauseSpawning = () => gm.pauseGame();
 global.resumeSpawning = () => gm.resumeGame();

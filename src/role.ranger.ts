@@ -101,6 +101,9 @@ class RangerCreep extends SmartCreep {
   }
 }
 
+// Export the class for instance caching
+export { RangerCreep };
+
 /**
  * Factory function for creating ranger instances
  * Maintains compatibility with current GameManager pattern

@@ -360,18 +360,8 @@ export class ManualSpawner {
   /**
    * Spawn an explorer creep
    */
-  public spawnExplorer(spawnName?: string, customBody?: BodyPartConstant[], nextRole?: CreepRole): SpawnResult {
-    const result = this.spawnCreep(CreepRoleEnum.EXPLORER, spawnName, customBody);
-
-    // Set the nextRole for explorer if specified
-    if (result.success && result.creepName && nextRole) {
-      const creep = Game.creeps[result.creepName];
-      if (creep && creep.memory) {
-        (creep.memory as any).nextRole = nextRole;
-      }
-    }
-
-    return result;
+  public spawnExplorer(spawnName?: string, customBody?: BodyPartConstant[]): SpawnResult {
+    return this.spawnCreep(CreepRoleEnum.EXPLORER, spawnName, customBody);
   }
 
   // ============================================================================
@@ -565,8 +555,8 @@ export const spawnRanger = (spawnName?: string, customBody?: BodyPartConstant[])
   return getManualSpawner().spawnRanger(spawnName, customBody);
 };
 
-export const spawnExplorer = (spawnName?: string, customBody?: BodyPartConstant[], nextRole?: CreepRole): SpawnResult => {
-  return getManualSpawner().spawnExplorer(spawnName, customBody, nextRole);
+export const spawnExplorer = (spawnName?: string, customBody?: BodyPartConstant[]): SpawnResult => {
+  return getManualSpawner().spawnExplorer(spawnName, customBody);
 };
 
 export const getSpawnStatus = (spawnName: string): SpawnStatus | null => {

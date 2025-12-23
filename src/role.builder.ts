@@ -228,6 +228,9 @@ class BuilderCreep extends SmartCreep {
   }
 }
 
+// Export the class for instance caching
+export { BuilderCreep };
+
 /**
  * Factory export for backward compatibility with existing GameManager
  */

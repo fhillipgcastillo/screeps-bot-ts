@@ -192,6 +192,9 @@ class UpgraderCreep extends SmartCreep {
   }
 }
 
+// Export the class for instance caching
+export { UpgraderCreep };
+
 /**
  * Factory function for creating upgrader instances
  * Maintains compatibility with current GameManager pattern
