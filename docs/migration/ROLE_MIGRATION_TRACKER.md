@@ -3,22 +3,23 @@
 **Migration Goal**: Convert all role-based files from object-with-methods pattern to TypeScript class-based implementations
 
 **Start Date**: December 23, 2025
-**Status**: In Progress
+**Status**: In Progress (Tier 1 Complete ✅)
 **Strategy**: Incremental (by complexity tier)
+**Last Updated**: December 23, 2025 - Tier 1 migration complete
 
 ---
 
 ## Migration Status Overview
 
-| File                           | Complexity | Status        | Assignee | Notes                                       |
-| ------------------------------ | ---------- | ------------- | -------- | ------------------------------------------- |
-| `role.defender.ts`             | Simple     | 🔴 Not Started | -        | Basic combat, no state management           |
-| `role.ranger.ts`               | Simple     | 🔴 Not Started | -        | Nearly identical to defender                |
-| `role.upgrader.ts`             | Simple     | 🔴 Not Started | -        | **Type mismatch to fix**, commented code    |
-| `role.builder.ts`              | Moderate   | 🔴 Not Started | -        | Priority logic, container caching           |
-| `role.explorer.ts`             | Moderate   | 🔴 Not Started | -        | **Different export pattern**, multi-state   |
-| `role.harvester_stationary.ts` | Complex    | 🔴 Not Started | -        | Multi-room, profitability checks, 484 lines |
-| `role.hauler.ts`               | Complex    | 🔴 Not Started | -        | Multi-room, dual-phase state, 611 lines     |
+| File                           | Complexity | Status        | Assignee | Notes                                                          |
+| ------------------------------ | ---------- | ------------- | -------- | -------------------------------------------------------------- |
+| `role.defender.ts`             | Simple     | � Complete    | -        | Migrated to class, hardcoded ref removed                       |
+| `role.ranger.ts`               | Simple     | 🟢 Complete    | -        | Migrated to class, hardcoded ref removed                       |
+| `role.upgrader.ts`             | Simple     | 🟢 Complete    | -        | Migrated to class, type mismatch fixed, commented code removed |
+| `role.builder.ts`              | Moderate   | 🔴 Not Started | -        | Priority logic, container caching                              |
+| `role.explorer.ts`             | Moderate   | 🔴 Not Started | -        | **Different export pattern**, multi-state                      |
+| `role.harvester_stationary.ts` | Complex    | 🔴 Not Started | -        | Multi-room, profitability checks, 484 lines                    |
+| `role.hauler.ts`               | Complex    | 🔴 Not Started | -        | Multi-room, dual-phase state, 611 lines                        |
 
 **Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⚠️ Blocked
 
@@ -45,28 +46,34 @@
 
 ## Complexity Tiers
 
-### Tier 1: Simple Roles (3 files)
+### Tier 1: Simple Roles (3 files) ✅ COMPLETE
 **Priority**: High (Low risk, quick wins)
 **Estimated Effort**: 1-2 hours total
 **Dependencies**: None
+**Status**: Complete (December 23, 2025)
 
-- [ ] **role.defender.ts** (34 lines)
-  - Current: Object with basic attack logic
-  - Target: Class extending `SmartCreep` or `CreepBrain`
-  - Risks: None
-  - Special Notes: Remove hardcoded `Spawn1` reference
+- [x] **role.defender.ts** (34 lines → 108 lines)
+  - ✅ Converted to class extending `SmartCreep`
+  - ✅ Removed hardcoded `Spawn1` reference
+  - ✅ Added proper TypeScript documentation
+  - ✅ Implemented patrol behavior for idle state
+  - ✅ Improved error handling with debug logging
 
-- [ ] **role.ranger.ts** (40 lines)
-  - Current: Object with ranged attack logic
-  - Target: Class extending `SmartCreep` or `CreepBrain`
-  - Risks: None
-  - Special Notes: Remove hardcoded `Spawn1` reference, nearly identical to defender
+- [x] **role.ranger.ts** (40 lines → 108 lines)
+  - ✅ Converted to class extending `SmartCreep`
+  - ✅ Removed hardcoded `Spawn1` reference
+  - ✅ Added proper TypeScript documentation
+  - ✅ Implemented patrol behavior for idle state
+  - ✅ Improved error handling with debug logging
 
-- [ ] **role.upgrader.ts** (130 lines)
-  - Current: Object with **type mismatch** (declared as `RoleHauler`)
-  - Target: Class extending `SmartCreep` or `Upgrader` (from types.ts)
-  - Risks: Type mismatch could indicate copy-paste errors
-  - Special Notes: Fix `RoleHauler` → `RoleUpgrader` type, clean commented code (lines 79-118)
+- [x] **role.upgrader.ts** (130 lines → 192 lines)
+  - ✅ Converted to class extending `SmartCreep`
+  - ✅ **Fixed type mismatch** (`RoleHauler` → `UpgraderCreep`)
+  - ✅ **Removed all commented code** (lines 79-118)
+  - ✅ Removed hardcoded `Spawn1` reference
+  - ✅ Added memory validation
+  - ✅ Integrated with cached container system
+  - ✅ Proper state management using CreepStateEnum
 
 ### Tier 2: Moderate Complexity (2 files)
 **Priority**: Medium (Moderate risk, good learning curve)
@@ -107,14 +114,17 @@
 ## Technical Debt to Address
 
 ### All Files
-- [ ] Remove hardcoded `Spawn1` references (6 files)
-- [ ] Standardize export pattern (all should use default export)
-- [ ] Align with class definitions in `types.ts` (CreepBrain, SmartCreep, etc.)
+- [x] Remove hardcoded `Spawn1` references (3/6 files complete - Tier 1)
+- [ ] Remove hardcoded `Spawn1` references (remaining 3 files - Tiers 2-3)
+- [x] Standardize export pattern (3/7 complete - Tier 1)
+- [ ] Standardize export pattern (remaining 4 files)
+- [x] Align with class definitions in `types.ts` (3/7 complete - Tier 1)
+- [ ] Align with class definitions in `types.ts` (remaining 4 files)
 
 ### Specific Files
-- [ ] **role.upgrader.ts**: Fix type mismatch (`RoleHauler` → `RoleUpgrader`)
+- [x] **role.upgrader.ts**: Fix type mismatch (`RoleHauler` → `RoleUpgrader`) ✅
+- [x] **role.upgrader.ts**: Clean commented code (lines 79-118) ✅
 - [ ] **role.builder.ts**: Clean commented code (lines 189-221)
-- [ ] **role.upgrader.ts**: Clean commented code (lines 79-118)
 - [ ] **role.explorer.ts**: Standardize export pattern (named function → default export)
 
 ---
@@ -268,12 +278,13 @@
 3. Should we add validation methods to memory interfaces?
    - **Answer**: TBD - consider centralized vs per-class approach
 
----
+---✅ Tier 1 complete (defender, ranger, upgrader)
+- **Week 2 (Dec 30-Jan 5, 2026)**: Tier 2 (Moderate complexity) + GameManager integration Phase 1
+- **Week 3 (Jan 6-12, 2026)**: Tier 3 (Complex multi-room) + testing
+- **Week 4 (Jan 13-19, 2026)**: GameManager Phase 2-3, documentation, cleanup, final testing
 
-## Timeline (Estimated)
-
-- **Week 1 (Dec 23-29, 2025)**: Tier 1 (Simple roles) + architecture blueprint
-- **Week 2 (Dec 30-Jan 5, 2026)**: Tier 2 (Moderate complexity) + GameManager integration
+**Target Completion**: January 19, 2026
+**Progress**: 3/7 role files migrated (43%) 2 (Moderate complexity) + GameManager integration
 - **Week 3 (Jan 6-12, 2026)**: Tier 3 (Complex multi-room) + testing
 - **Week 4 (Jan 13-19, 2026)**: Documentation, cleanup, final testing
 
