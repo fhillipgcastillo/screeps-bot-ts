@@ -49,6 +49,10 @@ export class SpawnManager {
   private static readonly MINIMUM_HARVESTERS_THRESHOLD = 3;
   private static readonly MINIMUM_HAULERS_THRESHOLD = 4;
   private static readonly MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED = 2;
+  // CRITICAL SHORTAGE: harvesters <= 2 OR haulers <= 2
+  // When either workforce dips below this, force emergency tier spawning (100-150 energy creeps)
+  private static readonly CRITICAL_HARVESTER_SHORTAGE = 2;
+  private static readonly CRITICAL_HAULER_SHORTAGE = 2;
 
   private autoSpawnEnabled: boolean = true;
   private spawnPaused: boolean = false;
@@ -155,6 +159,13 @@ export class SpawnManager {
    * Processes a single spawn and determines what creeps to spawn
    */
   private processSpawn(spawn: StructureSpawn, globalCreepCounts: CreepCounts): void {
+    // EARLY EXIT: Skip if spawn is already spawning a creep
+    if (spawn.spawning) {
+      debugLog.debug(`[${spawn.name}] Already spawning ${spawn.spawning.name}, skipping decision phase`);
+      this.displaySpawningVisual(spawn);
+      return;
+    }
+
     const context = this.createSpawnContext(spawn, globalCreepCounts);
 
     this.logDebugInfo(context);
@@ -256,7 +267,17 @@ export class SpawnManager {
   }
 
   /**
+   * Checks if we are in critical shortage (harvesters <= 2 OR haulers <= 2)
+   * This triggers emergency tier spawning (small bodies like 100-150 energy)
+   */
+  private isCriticalShortage(counts: CreepCounts): boolean {
+    return counts.harvesters <= SpawnManager.CRITICAL_HARVESTER_SHORTAGE
+      || counts.haulers <= SpawnManager.CRITICAL_HAULER_SHORTAGE;
+  }
+
+  /**
    * Determines if we should use initial spawning logic
+   * Conditions: controller level < 2 OR not enough harvesters/haulers to meet minimums
    */
   private shouldHandleInitialSpawning(context: SpawnContext): boolean {
     return context.currentLevel < SpawnManager.MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED
@@ -266,34 +287,46 @@ export class SpawnManager {
 
   /**
    * Handles initial spawning for early game or emergency situations
-   * Uses creep count-based emergency tier for fast recovery (harvesters < 2 OR haulers < 2)
+   * Uses creep count-based emergency tier for fast recovery (harvesters <= 2 OR haulers <= 2)
    */
   private handleInitialSpawning(context: SpawnContext): void {
     const { spawn, levelHandler, creepCounts, availableEnergy, enoughCreeps } = context;
     const currentLevel = context.currentLevel;
-    const inRecovery = isInRecoveryMode(spawn, creepCounts.harvesters);
+    const inRecovery = false;//isInRecoveryMode(spawn, creepCounts.harvesters);
 
     // CRITICAL: Emergency tier is based on CREEP COUNT, not energy
-    // Force emergency tier (small bodies) if harvesters < 2 OR haulers < 2
-    const forceEmergency = creepCounts.harvesters <= 2 || creepCounts.haulers <= 2;
+    // Force emergency tier (small bodies) if in critical shortage
+    const forceEmergency = this.isCriticalShortage(creepCounts);
 
     // Determine what to spawn based on priorities
     const spawnRole = this.getPrioritySpawnRole(creepCounts, levelHandler, enoughCreeps);
 
-    if (spawnRole) {
-      // Select template based on emergency or recovery mode
-      const template = selectBestTemplate(availableEnergy, spawnRole, currentLevel, inRecovery, forceEmergency);
+    if (!spawnRole) {
+      console.log(`[Initial] No priority role to spawn, creeps sufficient`);
+      return;
+    }
 
-      if (template && canSafelySpawn(spawn, template, currentLevel)) {
-        const result = this.spawnCreepWithTemplate(spawn, spawnRole, template);
-        if (result !== OK) {
-          debugLog.warn(`Failed to spawn ${spawnRole}: ${result}`);
-        } else if (forceEmergency) {
-          debugLog.debug(`[EMERGENCY] Spawned ${spawnRole} with small body (creep count < 2)`);
-        }
-        console.log(`Spawned ${spawnRole} using template ${template.tier} and resulted in code ${result}`);
-      } else {
-        console.log(`Cannot safely spawn ${spawnRole} at this time.`);
+    console.log(`[Initial] Attempting ${spawnRole}, critical=${forceEmergency}, energy=${availableEnergy}`);
+
+    // Select template based on emergency or recovery mode
+    const template = selectBestTemplate(availableEnergy, spawnRole, currentLevel, inRecovery, forceEmergency);
+
+    if (!template) {
+      debugLog.debug(`[Initial] No template available for ${spawnRole} (energy=${availableEnergy}, emergency=${forceEmergency})`);
+      return;
+    }
+
+    debugLog.debug(`[Initial] Template selected: ${template.tier} (cost=${template.energyCost}, minRequired=${template.minEnergyRequired})`);
+
+    const canSpawn = canSafelySpawn(spawn, template, currentLevel);
+    debugLog.debug(`[Initial] Safe to spawn: ${canSpawn}`);
+
+    if (canSpawn) {
+      const result = this.spawnCreepWithTemplate(spawn, spawnRole, template);
+      if (result !== OK) {
+        debugLog.warn(`Failed to spawn ${spawnRole}: error code ${result}`);
+      } else if (forceEmergency) {
+        debugLog.debug(`[EMERGENCY] Spawned ${spawnRole} with small body (critical shortage)`);
       }
     }
   }
@@ -472,20 +505,33 @@ export class SpawnManager {
     const { spawn, levelHandler, creepCounts, availableEnergy, energyCapacity, enoughCreeps } = context;
     const currentLevel = context.currentLevel;
 
-    // Check if we need emergency tier based on creep count
-    const forceEmergency = creepCounts.harvesters < 2 || creepCounts.haulers < 2;
+    // Check if we need emergency tier based on critical shortage
+    const forceEmergency = this.isCriticalShortage(creepCounts);
 
     // Get priority role to spawn
     const spawnRole = this.getPrioritySpawnRole(creepCounts, levelHandler, enoughCreeps);
 
     if (!spawnRole) {
+      debugLog.debug(`[Advanced] No priority role to spawn, creeps sufficient`);
       return; // No more creeps needed
     }
+
+    debugLog.debug(`[Advanced] Attempting ${spawnRole}, critical=${forceEmergency}, energy=${availableEnergy}`);
 
     // Select best template based on available energy
     const template = selectBestTemplate(availableEnergy, spawnRole, currentLevel, false, forceEmergency);
 
-    if (template && canSafelySpawn(spawn, template, currentLevel)) {
+    if (!template) {
+      debugLog.debug(`[Advanced] No template available for ${spawnRole} (energy=${availableEnergy}, emergency=${forceEmergency})`);
+      return;
+    }
+
+    debugLog.debug(`[Advanced] Template selected: ${template.tier} (cost=${template.energyCost})`);
+
+    const canSpawn = canSafelySpawn(spawn, template, currentLevel);
+    debugLog.debug(`[Advanced] Safe to spawn: ${canSpawn}`);
+
+    if (canSpawn) {
       this.spawnCreepWithTemplate(spawn, spawnRole, template);
     }
   }
