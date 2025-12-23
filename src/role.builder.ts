@@ -1,262 +1,238 @@
-// import * as _ from "lodash";
+/**
+ * Builder Role - Constructs buildings and repairs structures
+ * Migrated to class-based pattern
+ */
+
+import { SmartCreep } from "./types";
+import { BuilderMemory, CreepRoleEnum, CreepStateEnum } from "./types";
 import { findClosestContainer, getContainers } from "./utils";
 import { debugLog } from "./utils/Logger";
 import { getCachedContainers } from "./utils/energy-bootstrap";
 import { getNextResourceTarget } from "./utils/resource-assignment";
 
-type RoleBuilder = {
-    run: (creep: Creep) => void,
-    // getCreepTarget: (creep:Creep) => Source | undefined,
-    // hauler: (creep: Creep) => void,
-    // transfer: (creep: Creep) => void,
-    // storeNewHarvestTarget: (creep:Creep) => void,
-    // dropEnergy: (creep:Creep) => void,
-    memorizedPrevTargets: (creep: Creep) => void,
-    cleanUpTargetsState: (creep: Creep) => void,
-    // getARandomTarget: (sources: Source[]) => Resource | undefined,
-    getClosestTarget: (creep: Creep, targets: any[]) => Resource | undefined,
-    shouldResetPrevTargets: (creep: Creep, targets: any[]) => void,
-    getNextClosestTarget: (creep: Creep, targets: any[]) => Resource | undefined,
-    getAppropiateResourceTarget: (creep: Creep, targets: any[]) => Resource | undefined,
-    stateSetter: (creep: Creep) => void,
-    stateHandler: (creep: Creep) => void,
-    getBuildTarget: (creep: Creep) => ConstructionSite | null,
-    build: (creep: Creep) => void,
-    pickUpEnergy: (creep: Creep) => void,
-    findTarget: (creep: Creep) => ConstructionSite | null,
+/**
+ * BuilderCreep class - extends SmartCreep with builder-specific behavior
+ */
+class BuilderCreep extends SmartCreep {
+  declare memory: BuilderMemory;
+
+  constructor(creep: Creep) {
+    super(creep);
+    this.validateMemory();
+  }
+
+  /**
+   * Validate and initialize builder-specific memory
+   */
+  private validateMemory(): void {
+    if (!this.memory.building) this.memory.building = false;
+    if (!this.memory.harvesting) this.memory.harvesting = false;
+  }
+
+  /**
+   * Main run method - executed every tick
+   */
+  public run(): void {
+    try {
+      this.updateWorkingState();
+      this.executeState();
+    } catch (error) {
+      debugLog.error(`${this.creep.name} builder error:`, error);
+    }
+  }
+
+  /**
+   * Update working state based on energy levels
+   */
+  private updateWorkingState(): void {
+    if (this.creep.store.getFreeCapacity() > 0 && !this.memory.building) {
+      this.memory.harvesting = true;
+      this.memory.building = false;
+      this.setState(CreepStateEnum.COLLECTING);
+    } else if (this.creep.store.getFreeCapacity() === 0 && !this.memory.building) {
+      this.memory.building = true;
+      this.memory.harvesting = false;
+      this.setState(CreepStateEnum.BUILDING);
+    } else if (this.creep.store.energy === 0 && this.memory.building) {
+      this.memory.building = false;
+      this.memory.harvesting = true;
+      this.setState(CreepStateEnum.COLLECTING);
+    }
+  }
+
+  /**
+   * Execute behavior based on current state
+   */
+  private executeState(): void {
+    const cachedContainers = getCachedContainers(this.creep.room.name);
+    const validContainers = cachedContainers.filter(c => c.store.energy > 0);
+    const containers = validContainers.length > 0 ? validContainers : getContainers(this.creep, 50);
+
+    if (this.memory.harvesting && containers.length > 0) {
+      this.collectFromContainers(containers);
+    } else if (this.memory.harvesting) {
+      this.collectEnergy();
+    } else if (this.memory.building) {
+      this.buildStructures();
+    }
+  }
+
+  /**
+   * Collect energy from containers
+   */
+  private collectFromContainers(containers: StructureContainer[]): void {
+    const container = findClosestContainer(this.creep, containers);
+    if (!container) {
+      debugLog.debug(`${this.creep.name} no container found`);
+      return;
+    }
+
+    const withdrawAction = this.creep.withdraw(container, RESOURCE_ENERGY);
+    if (withdrawAction === ERR_NOT_IN_RANGE) {
+      this.creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
+    }
+  }
+
+  /**
+   * Collect energy from various sources (containers, extensions, spawn)
+   */
+  private collectEnergy(): void {
+    const minEnergyNeeded = this.creep.store.getCapacity(RESOURCE_ENERGY) / 2;
+    const containers = this.creep.room.find(FIND_STRUCTURES, {
+      filter: (s) =>
+        s.structureType === STRUCTURE_CONTAINER &&
+        (s.store[RESOURCE_ENERGY] >= 300 || s.store[RESOURCE_ENERGY] >= minEnergyNeeded)
+    }) as StructureContainer[];
+
+    const extensions = this.creep.room.find(FIND_MY_STRUCTURES, {
+      filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0
+    }) as StructureExtension[];
+
+    if (containers.length > 0) {
+      const container = getNextResourceTarget(this.creep.room, 'builder', containers) as StructureContainer;
+      if (container) {
+        const withdrawAction = this.creep.withdraw(container, RESOURCE_ENERGY);
+        if (withdrawAction === ERR_NOT_IN_RANGE) {
+          this.creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
+        }
+      }
+    } else if (extensions.length > 0) {
+      const extension = getNextResourceTarget(this.creep.room, 'builder', extensions) as StructureExtension;
+      if (extension && this.creep.withdraw(extension, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+        this.creep.moveTo(extension, { visualizePathStyle: { stroke: '#ffaa00' } });
+      }
+    } else {
+      this.withdrawFromSpawn();
+    }
+  }
+
+  /**
+   * Withdraw energy from spawn as fallback
+   */
+  private withdrawFromSpawn(): void {
+    const spawns = this.creep.room.find(FIND_MY_SPAWNS);
+    if (spawns.length === 0) return;
+
+    const spawn = spawns[0];
+    if (this.creep.withdraw(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
+      this.creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
+    }
+  }
+
+  /**
+   * Get priority build target based on room level
+   */
+  private getBuildTarget(): ConstructionSite | null {
+    this.memory.prevBuildTarget = this.memory.buildTarget;
+    this.memory.buildTarget = undefined;
+
+    const controller = this.creep.room.controller;
+    const roomEnergyCapacity = this.creep.room.energyCapacityAvailable;
+    const isEarlyGame = roomEnergyCapacity <= 300 && controller?.level && controller.level < 2;
+
+    let target: ConstructionSite | null;
+
+    if (isEarlyGame) {
+      // Early game priority: containers, roads, extensions
+      target = this.creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES, {
+        filter: (structure) => {
+          return (
+            structure.structureType === STRUCTURE_CONTAINER ||
+            structure.structureType === STRUCTURE_ROAD ||
+            structure.structureType === STRUCTURE_EXTENSION
+          );
+        }
+      });
+    } else {
+      // Mid-late game priority: all defensive and infrastructure
+      target = this.creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES, {
+        filter: (structure) => {
+          return (
+            structure.structureType === STRUCTURE_RAMPART ||
+            structure.structureType === STRUCTURE_ROAD ||
+            structure.structureType === STRUCTURE_CONTAINER ||
+            structure.structureType === STRUCTURE_EXTENSION ||
+            structure.structureType === STRUCTURE_SPAWN ||
+            structure.structureType === STRUCTURE_TOWER
+          );
+        }
+      });
+    }
+
+    if (target) {
+      this.memory.buildTarget = target.id;
+    }
+    return target;
+  }
+
+  /**
+   * Find existing build target from memory
+   */
+  private findTarget(): ConstructionSite | null {
+    if (!this.memory.buildTarget) return null;
+
+    const target = this.creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES, {
+      filter: (structure) => structure.id === this.memory.buildTarget
+    });
+    return target;
+  }
+
+  /**
+   * Build structures (main building logic)
+   */
+  private buildStructures(): void {
+    let target: ConstructionSite | null = null;
+
+    if (!this.memory.buildTarget || !Object.keys(Game.constructionSites).includes(this.memory.buildTarget)) {
+      target = this.getBuildTarget();
+    } else {
+      target = this.findTarget();
+    }
+
+    if (target) {
+      this.memory.buildTarget = target.id;
+      const buildActionError = this.creep.build(target);
+
+      if (buildActionError === ERR_NOT_IN_RANGE) {
+        this.creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
+      } else if (buildActionError === ERR_INVALID_TARGET) {
+        this.memory.prevBuildTarget = this.memory.buildTarget;
+        this.memory.buildTarget = undefined;
+      } else if (buildActionError !== OK) {
+        debugLog.warn(`${this.creep.name} build error: ${buildActionError}`);
+      }
+    } else {
+      this.memory.prevBuildTarget = this.memory.buildTarget;
+      this.memory.buildTarget = undefined;
+    }
+  }
+}
+
+/**
+ * Factory export for backward compatibility with existing GameManager
+ */
+export default {
+  run: (creep: Creep) => {
+    new BuilderCreep(creep).run();
+  }
 };
-
-const roleBuilder: RoleBuilder = {
-    /** @param {Creep} creep **/
-    run: function (creep) {
-        // when there's not harvester or haulers do not build
-        // creep.say(creep.name);
-        try {
-            this.stateSetter(creep);
-            this.stateHandler(creep);
-        } catch (error) {
-            debugLog.error(creep.name + " bldr error - ", error)
-        }
-    },
-    stateSetter: function (creep) {
-        //state handler
-        if (creep.store.getFreeCapacity() > 0 && !creep.memory.building) {
-            creep.memory.harvesting = true;
-            creep.memory.building = false;
-            // creep.memory.idle = false;
-        } else if (creep.store.getFreeCapacity() === 0 && !creep.memory.building) {
-            creep.memory.building = true;
-            creep.memory.harvesting = false;
-            // creep.memory.idle = false;
-        } else if (creep.store.energy === 0 && creep.memory.building) {
-            creep.memory.building = false;
-            creep.memory.harvesting = true;
-            // creep.memory.idle = false;
-        }
-    },
-    stateHandler: function (creep) {
-        // var sources = creep.room.find(FIND_SOURCES);
-        // sources.sort((a, b) => a.pos.findInRange(FIND_MY_CREEPS, 1).length - b.pos.findInRange(FIND_MY_CREEPS, 1).length);
-
-        // Use cached containers for better performance
-        const cachedContainers = getCachedContainers(creep.room.name);
-        const validContainers = cachedContainers.filter(c => c.store.energy > 0);
-        const containers = validContainers.length > 0 ? validContainers : getContainers(creep, 50);
-
-        if (creep.memory.harvesting && containers.length > 0) {
-            let container = findClosestContainer(creep, containers);
-            const withdrawAction = creep.withdraw(container!, RESOURCE_ENERGY);
-            if (container && withdrawAction === ERR_NOT_IN_RANGE) {
-                creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
-            } else {
-                console.log(creep.name + " no container found");
-            }
-        } else if (creep.memory.harvesting) {
-            this.pickUpEnergy(creep);
-        } else if (creep.memory.building) {
-            // var targets = creep.rom.find(FIND_MY_CONSTRUCTION_SITES, {});
-            this.build(creep)
-        }
-    },
-    getBuildTarget(creep) {
-        let target: ConstructionSite | null;
-        creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
-        creep.memory.buildTarget = undefined;
-        const controller = creep.room.controller;
-        const roomEnergyCapacityAvailableLess300 = Game.spawns.Spawn1.room.energyCapacityAvailable <= 300;
-        const spawnControllerUnderLevel2 = controller?.level && controller?.level < 2;
-
-        if (roomEnergyCapacityAvailableLess300 && spawnControllerUnderLevel2) {
-            target = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES, {
-                filter: (structure) => {
-                    return (
-                        structure.structureType === STRUCTURE_CONTAINER ||
-                        structure.structureType === STRUCTURE_ROAD ||
-                        structure.structureType === STRUCTURE_EXTENSION
-                    )// && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-                }
-            });
-        } else {
-            target = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES, {
-                filter: (structure) => {
-                    // console.log(structure);
-
-                    return (
-                        structure.structureType === STRUCTURE_RAMPART ||
-                        structure.structureType === STRUCTURE_ROAD ||
-                        structure.structureType === STRUCTURE_CONTAINER ||
-                        structure.structureType === STRUCTURE_EXTENSION ||
-                        structure.structureType === STRUCTURE_SPAWN ||
-                        structure.structureType === STRUCTURE_TOWER
-                    )// && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-                }
-            });
-        }
-
-        creep.memory.buildTarget = target?.id;
-        return target;
-    },
-    findTarget(creep) {
-        const target = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES, {
-            filter: (structure) => {
-                // console.log(structure);
-
-                return (
-                    structure.id === creep.memory.buildTarget
-                )// && structure.store.getFreeCapacity(RESOURCE_ENERGY) > 0;
-            }
-        });
-        return target;
-    },
-    build(creep) {
-        var target = null;
-        if (!creep.memory.buildTarget || !Object.keys(Game.constructionSites).includes(creep.memory.buildTarget)) {
-            target = this.getBuildTarget(creep);
-        } else {
-            target = this.findTarget(creep);
-        }
-
-        if (target) {
-            creep.memory.buildTarget = target.id;
-            const buildActionError = creep.build(target);
-            if (buildActionError === ERR_NOT_IN_RANGE) {
-                creep.moveTo(target, { visualizePathStyle: { stroke: '#ffffff' } });
-            } else if (buildActionError === ERR_INVALID_TARGET) {
-                creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
-                creep.memory.buildTarget = undefined;
-            } else if (buildActionError !== OK) {
-                debugLog.warn(creep.name + " Bld Error ", buildActionError);
-            }
-        } else {
-            creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
-            creep.memory.buildTarget = undefined;
-        }
-    },
-    pickUpEnergy(creep) {
-        // Find containers with at least half of creep's carry capacity
-        const minEnergyNeeded = creep.store.getCapacity(RESOURCE_ENERGY) / 2;
-        var containers = creep.room.find(FIND_STRUCTURES, {
-            filter: (s) =>
-                s.structureType === STRUCTURE_CONTAINER
-                && (s.store[RESOURCE_ENERGY] >= 300 || s.store[RESOURCE_ENERGY] >= minEnergyNeeded)
-        });
-
-        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0 })
-
-        if (containers.length > 0) {
-            // Round-robin assignment for containers
-            let container = getNextResourceTarget(creep.room, 'builder', containers) as StructureContainer;
-
-            if (container) {
-                const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
-                if (withdrawAction === ERR_NOT_IN_RANGE) {
-                    creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
-                }
-            }
-        } else if (extensions.length > 0) {
-            // Round-robin assignment for extensions
-            let theExtension = getNextResourceTarget(creep.room, 'builder', extensions) as StructureExtension;
-
-            if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-        }
-        else {
-            let spawn = Game.spawns.Spawn1;
-            if (creep.withdraw(spawn, RESOURCE_ENERGY) === ERR_NOT_IN_RANGE) {
-                creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-        }
-
-        // var droppedResources = creep.room.find(FIND_DROPPED_RESOURCES, {
-        //     filter: resource => resource.resourceType === RESOURCE_ENERGY
-        // });
-
-        // if (droppedResources.length > 0) {
-        //     let resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
-        //     // console.log("sourceTarget", resourceTarget)
-        //     if (resourceTarget) {
-        //         var harvestAction = creep.pickup(resourceTarget);
-
-        //         if (harvestAction === ERR_NOT_IN_RANGE) {
-        //             // creep.say("Moving...");
-        //             let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
-        //             if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
-        //                 console.log(creep.name + " mv2 Rsc ERR_NO_PATH", movingError);
-        //                 // creep.memory.prevSourceTarget = creep.memory.sourceTarget;
-        //                 // creep.memory.sourceTarget = undefined;
-        //                 this.cleanUpTargetsState(creep);
-        //             }
-        //         } else if (harvestAction === ERR_INVALID_TARGET) {
-        //             console.log(creep.name + "  Rsc ERR_INVALID_TARGET");
-        //             // creep.memory.prevSourceTarget = creep.memory.sourceTarget;
-        //             // creep.memory.sourceTarget = undefined;
-        //             this.cleanUpTargetsState(creep);
-        //         } else if (harvestAction !== OK) {
-        //             console.log(creep.name + "  Rsc Another error", harvestAction);
-        //         }
-        //     }
-        // }
-    },
-    memorizedPrevTargets(creep) {
-        if (!creep.memory?.prevTargets) {
-            creep.memory.prevTargets = []
-        }
-        if (creep.memory.sourceTarget) {
-            creep.memory.prevTargets.push(creep.memory.sourceTarget);
-        }
-    },
-    cleanUpTargetsState(creep) {
-        this.memorizedPrevTargets(creep);
-        creep.memory.prevSourceTarget = creep.memory.sourceTarget;
-        creep.memory.sourceTarget = undefined;
-    },
-    getClosestTarget(creep, targets) {
-        var nextClosestTaret = creep.pos.findClosestByRange(targets)
-        return nextClosestTaret
-    },
-    shouldResetPrevTargets(creep, targets) {
-        if (!creep?.memory?.prevTargets) {
-            this.memorizedPrevTargets(creep);
-        }
-        if (creep.memory.prevBuildTargets.length === targets.length) {
-            creep.memory.prevBuildTargets = [];
-        }
-    },
-    getNextClosestTarget(creep, targets) {
-        this.shouldResetPrevTargets(creep, targets);
-        var availableTargets = _.filter(targets, (source) => !creep.memory.prevBuildTargets.includes(source.id));
-        var nextClosestTaret = this.getClosestTarget(creep, availableTargets)
-        return nextClosestTaret
-    },
-    getAppropiateResourceTarget(creep, sources) {
-        try {
-            return this.getNextClosestTarget(creep, sources)
-        } catch (error) {
-            debugLog.error("error with " + creep.name, error)
-            return undefined;
-        }
-    },
-} as RoleBuilder;
-
-export default roleBuilder;

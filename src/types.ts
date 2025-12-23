@@ -38,7 +38,7 @@ export function isValidCreepRole(role: string): role is CreepRole {
 // CREEP STATE TYPES
 // ============================================================================
 
-export type eCreepState = "IDLE" | "HARVESTING" | "BUILDING" | "HAULING" | "UPGRADING" | "ATTACKING" | "HEALING";
+export type eCreepState = "IDLE" | "HARVESTING" | "BUILDING" | "HAULING" | "UPGRADING" | "ATTACKING" | "HEALING" | "COLLECTING" | "EXPLORING";
 export enum CreepStateEnum {
     IDLE = "IDLE",
     HARVESTING = "HARVESTING",

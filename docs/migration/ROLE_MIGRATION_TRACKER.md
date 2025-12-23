@@ -3,23 +3,23 @@
 **Migration Goal**: Convert all role-based files from object-with-methods pattern to TypeScript class-based implementations
 
 **Start Date**: December 23, 2025
-**Status**: In Progress (Tier 1 Complete ✅)
+**Status**: In Progress (Tier 2 Complete ✅)
 **Strategy**: Incremental (by complexity tier)
-**Last Updated**: December 23, 2025 - Tier 1 migration complete
+**Last Updated**: December 23, 2025 - Tier 2 migration complete
 
 ---
 
 ## Migration Status Overview
 
-| File                           | Complexity | Status        | Assignee | Notes                                                          |
-| ------------------------------ | ---------- | ------------- | -------- | -------------------------------------------------------------- |
-| `role.defender.ts`             | Simple     | � Complete    | -        | Migrated to class, hardcoded ref removed                       |
-| `role.ranger.ts`               | Simple     | 🟢 Complete    | -        | Migrated to class, hardcoded ref removed                       |
-| `role.upgrader.ts`             | Simple     | 🟢 Complete    | -        | Migrated to class, type mismatch fixed, commented code removed |
-| `role.builder.ts`              | Moderate   | 🔴 Not Started | -        | Priority logic, container caching                              |
-| `role.explorer.ts`             | Moderate   | 🔴 Not Started | -        | **Different export pattern**, multi-state                      |
-| `role.harvester_stationary.ts` | Complex    | 🔴 Not Started | -        | Multi-room, profitability checks, 484 lines                    |
-| `role.hauler.ts`               | Complex    | 🔴 Not Started | -        | Multi-room, dual-phase state, 611 lines                        |
+| File                           | Complexity | Status        | Assignee | Notes                                                            |
+| ------------------------------ | ---------- | ------------- | -------- | ---------------------------------------------------------------- |
+| `role.defender.ts`             | Simple     | � Complete    | -        | Migrated to class, hardcoded ref removed                         |
+| `role.ranger.ts`               | Simple     | 🟢 Complete    | -        | Migrated to class, hardcoded ref removed                         |
+| `role.upgrader.ts`             | Simple     | 🟢 Complete    | -        | Migrated to class, type mismatch fixed, commented code removed   |
+| `role.builder.ts`              | Moderate   | � Complete    | -        | Migrated to class, commented code removed, hardcoded ref removed |
+| `role.explorer.ts`             | Moderate   | 🟢 Complete    | -        | Migrated to class, export standardized, multi-state preserved    |
+| `role.harvester_stationary.ts` | Complex    | 🔴 Not Started | -        | Multi-room, profitability checks, 484 lines                      |
+| `role.hauler.ts`               | Complex    | 🔴 Not Started | -        | Multi-room, dual-phase state, 611 lines                          |
 
 **Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⚠️ Blocked
 
@@ -75,22 +75,30 @@
   - ✅ Integrated with cached container system
   - ✅ Proper state management using CreepStateEnum
 
-### Tier 2: Moderate Complexity (2 files)
+### Tier 2: Moderate Complexity (2 files) ✅ COMPLETE
 **Priority**: Medium (Moderate risk, good learning curve)
 **Estimated Effort**: 2-3 hours total
 **Dependencies**: Tier 1 complete (for pattern consistency)
+**Status**: Complete (December 23, 2025)
 
-- [ ] **role.builder.ts** (263 lines)
-  - Current: Object with state machine, priority-based construction
-  - Target: Class extending `SmartCreep` or `Builder` (from types.ts)
-  - Risks: Level-dependent priority logic must be preserved
-  - Special Notes: Clean commented code (lines 189-221), container caching pattern
+- [x] **role.builder.ts** (263 lines → 239 lines)
+  - ✅ Converted to class extending `SmartCreep`
+  - ✅ **Removed 33 lines of commented code** (including unused resource-assignment logic)
+  - ✅ Removed hardcoded `Spawn1` reference
+  - ✅ Preserved level-dependent priority logic (early game vs mid-late)
+  - ✅ Maintained container caching pattern integration
+  - ✅ Added proper state management with CreepStateEnum.COLLECTING/BUILDING
+  - ✅ Improved withdraw logic with fallback to spawn
 
-- [ ] **role.explorer.ts** (225 lines)
-  - Current: **Named function export** (inconsistent pattern)
-  - Target: Class extending `SmartCreep` or custom `Explorer` class
-  - Risks: Different export pattern, updates global Memory.exploration
-  - Special Notes: Multi-state logic (exploring → scanning → returning), timeout handling
+- [x] **role.explorer.ts** (225 lines → 289 lines)
+  - ✅ Converted to class extending `SmartCreep`
+  - ✅ **Standardized export pattern** (named function → default factory)
+  - ✅ Updated GameManager import to use `roleExplorer.run()`
+  - ✅ Preserved multi-state logic (exploring → scanning → returning)
+  - ✅ Maintained room transition timeout handling
+  - ✅ Added CreepStateEnum.EXPLORING state
+  - ✅ Fixed TypeScript strict null checks on scannedRooms initialization
+  - ✅ Improved state transitions with clear method separation
 
 ### Tier 3: Complex Multi-Room (2 files)
 **Priority**: Low (High risk, high value)

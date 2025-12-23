@@ -1,224 +1,294 @@
 /**
- * Explorer Role
- * Scouts adjacent rooms to detect hostile attackers and assess safety for remote harvesting
- * Updates room exploration memory with safety status
+ * Explorer Role - Scouts adjacent rooms to detect hostile attackers
+ * Migrated to class-based pattern
  */
 
+import { SmartCreep } from "./types";
 import { MULTI_ROOM_CONFIG } from "./config/multi-room.config";
-import { ExplorerMemory, RoomExplorationData, RoomSafetyStatus } from "./types";
+import { ExplorerMemory, RoomExplorationData, RoomSafetyStatus, CreepRoleEnum, CreepStateEnum } from "./types";
 import { debugLog } from "./utils/Logger";
 
 /**
- * Initialize exploration memory if not present
+ * ExplorerCreep class - extends SmartCreep with exploration behavior
  */
-function initializeExplorationMemory(): void {
-  if (!Memory.exploration) {
-    Memory.exploration = {};
-  }
-}
+class ExplorerCreep extends SmartCreep {
+  declare memory: ExplorerMemory;
 
-/**
- * Get adjacent room names from current room
- */
-function getAdjacentRooms(roomName: string): string[] {
-  const room = Game.rooms[roomName];
-  if (!room) {
+  private static readonly SCAN_EXPIRY = 5000;
+
+  constructor(creep: Creep) {
+    super(creep);
+    this.validateMemory();
+  }
+
+  /**
+   * Validate and initialize explorer-specific memory
+   */
+  private validateMemory(): void {
+    if (!this.memory.homeRoom) {
+      this.memory.homeRoom = this.creep.room.name;
+    }
+    if (!this.memory.scannedRooms) {
+      this.memory.scannedRooms = [];
+    }
+    if (this.memory.isReturning === undefined) this.memory.isReturning = false;
+    if (this.memory.explorationComplete === undefined) this.memory.explorationComplete = false;
+  }
+
+  /**
+   * Main run method - executed every tick
+   */
+  public run(): void {
+    try {
+      this.initializeExplorationMemory();
+
+      // State: Scanning target room
+      if (this.memory.targetRoom && this.creep.room.name === this.memory.targetRoom) {
+        this.handleScanningState();
+        return;
+      }
+
+      // State: Returning to home
+      if (this.memory.isReturning) {
+        this.handleReturningState();
+        return;
+      }
+
+      // State: At home, selecting next target
+      if (this.creep.room.name === this.memory.homeRoom && !this.memory.targetRoom) {
+        this.handleSelectingTargetState();
+        return;
+      }
+
+      // State: Transitioning to target room
+      if (this.memory.targetRoom) {
+        this.handleTransitioningState();
+        return;
+      }
+
+      // Fallback: Idle at home
+      this.handleIdleState();
+    } catch (error) {
+      debugLog.error(`${this.creep.name} explorer error:`, error);
+    }
+  }
+
+  /**
+   * Initialize global exploration memory
+   */
+  private initializeExplorationMemory(): void {
+    if (!Memory.exploration) {
+      Memory.exploration = {};
+    }
+  }
+
+  /**
+   * Handle scanning state - creep is in target room
+   */
+  private handleScanningState(): void {
+    this.memory.transitionStartTick = undefined;
+    this.scanCurrentRoom();
+
+    if (!this.memory?.scannedRooms) {
+      this.memory.scannedRooms = [];
+    }
+
+    if (!this.memory.scannedRooms.includes(this.creep.room.name)) {
+      this.memory.scannedRooms.push(this.creep.room.name);
+    }
+
+    const data = Memory.exploration?.[this.creep.room.name];
+    if (data && data.safetyStatus === RoomSafetyStatus.HOSTILE) {
+      debugLog.warn(`[EXPLORER] ${this.creep.name} detected hostiles in ${this.creep.room.name}, returning home`);
+    } else {
+      debugLog.debug(`[EXPLORER] ${this.creep.name} scan complete for ${this.creep.room.name}, returning home`);
+    }
+
+    this.memory.isReturning = true;
+    this.memory.targetRoom = undefined;
+    this.setState(CreepStateEnum.IDLE);
+  }
+
+  /**
+   * Handle returning to home room state
+   */
+  private handleReturningState(): void {
+    if (this.creep.room.name === this.memory.homeRoom) {
+      this.memory.isReturning = false;
+      this.memory.targetRoom = undefined;
+      this.memory.transitionStartTick = undefined;
+      this.setState(CreepStateEnum.IDLE);
+    } else {
+      const homePos = new RoomPosition(25, 25, this.memory.homeRoom);
+      this.creep.moveTo(homePos, { reusePath: 10 });
+    }
+  }
+
+  /**
+   * Handle selecting next target room state
+   */
+  private handleSelectingTargetState(): void {
+    const nextRoom = this.getNextRoomToExplore();
+    if (!nextRoom) {
+      this.memory.explorationComplete = true;
+      debugLog.debug(`[EXPLORER] ${this.creep.name} completed exploration around ${this.memory.homeRoom}`);
+      return;
+    }
+
+    this.memory.targetRoom = nextRoom;
+    this.memory.transitionStartTick = Game.time;
+    this.setState(CreepStateEnum.EXPLORING);
+    debugLog.debug(`[EXPLORER] ${this.creep.name} targeting adjacent room ${nextRoom}`);
+  }
+
+  /**
+   * Handle transitioning to target room state
+   */
+  private handleTransitioningState(): void {
+    if (!this.memory.targetRoom) return;
+
+    const elapsed = this.memory.transitionStartTick ? Game.time - this.memory.transitionStartTick : 0;
+    if (!this.memory.transitionStartTick) {
+      this.memory.transitionStartTick = Game.time;
+    }
+
+    if (elapsed > MULTI_ROOM_CONFIG.roomTransitionTimeout) {
+      this.handleTransitionTimeout();
+      return;
+    }
+
+    const onBorder = this.creep.pos.x === 0 || this.creep.pos.x === 49 || this.creep.pos.y === 0 || this.creep.pos.y === 49;
+    const targetPos = new RoomPosition(25, 25, this.memory.targetRoom);
+    const moveResult = this.creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
+
+    if (moveResult !== OK && moveResult !== ERR_TIRED) {
+      debugLog.warn(`[EXPLORER] ${this.creep.name} moveTo(${this.memory.targetRoom}) failed with ${moveResult} at ${this.creep.pos}`);
+    } else if (MULTI_ROOM_CONFIG.debugEnabled && onBorder && Game.time % 20 === 0) {
+      debugLog.debug(`[EXPLORER] ${this.creep.name} transitioning to ${this.memory.targetRoom} on border ${this.creep.pos}`);
+    }
+  }
+
+  /**
+   * Handle idle state - stay near home room center
+   */
+  private handleIdleState(): void {
+    if (this.creep.room.name !== this.memory.homeRoom) {
+      const homePos = new RoomPosition(25, 25, this.memory.homeRoom);
+      this.creep.moveTo(homePos, { reusePath: 10 });
+    }
+    this.setState(CreepStateEnum.IDLE);
+  }
+
+  /**
+   * Handle room transition timeout
+   */
+  private handleTransitionTimeout(): void {
+    if (!this.memory.targetRoom) return;
+
+    const elapsed = this.memory.transitionStartTick ? Game.time - this.memory.transitionStartTick : 0;
+    debugLog.warn(
+      `[EXPLORER] ${this.creep.name} room transition timeout: ${this.creep.room.name} → ${this.memory.targetRoom} ` +
+      `(${elapsed}/${MULTI_ROOM_CONFIG.roomTransitionTimeout} ticks)`
+    );
+
+    this.initializeExplorationMemory();
+    if (Memory.exploration) {
+      Memory.exploration[this.memory.targetRoom] = {
+        roomName: this.memory.targetRoom,
+        safetyStatus: RoomSafetyStatus.EXPIRED,
+        lastScanned: Game.time,
+        hostileCount: 0,
+        explorerName: this.creep.name
+      } as RoomExplorationData;
+    }
+
+    this.memory.isReturning = true;
+    this.memory.targetRoom = undefined;
+    this.memory.transitionStartTick = undefined;
+  }
+
+  /**
+   * Scan current room for hostiles and update exploration memory
+   */
+  private scanCurrentRoom(): void {
+    const roomName = this.creep.room.name;
+
+    const hostiles = this.creep.room.find(FIND_HOSTILE_CREEPS);
+    const attackers = hostiles.filter(this.isAttacker);
+    const sources = this.creep.room.find(FIND_SOURCES);
+    const controller = this.creep.room.controller;
+
+    const safetyStatus = attackers.length > 0 ? RoomSafetyStatus.HOSTILE : RoomSafetyStatus.SAFE;
+
+    if (attackers.length > 0) {
+      debugLog.warn(`[EXPLORER] Room ${roomName} is HOSTILE: ${attackers.length} attackers detected`);
+    } else {
+      debugLog.debug(`[EXPLORER] Room ${roomName} is SAFE`);
+    }
+
+    const explorationData: RoomExplorationData = {
+      roomName,
+      safetyStatus,
+      lastScanned: Game.time,
+      hostileCount: attackers.length,
+      sourceCount: sources.length,
+      controllerLevel: controller?.level,
+      controllerOwner: controller?.owner?.username || controller?.reservation?.username,
+      explorerName: this.creep.name,
+      enabledForRemoteHarvest: false
+    };
+
+    if (Memory.exploration) {
+      Memory.exploration[roomName] = explorationData;
+    }
+
+    debugLog.debug(`[EXPLORER] Scanned ${roomName}: ${sources.length} sources, ${attackers.length} attackers`);
+  }
+
+  /**
+   * Check if a creep has attack or ranged attack parts
+   */
+  private isAttacker(creep: Creep): boolean {
+    return creep.getActiveBodyparts(ATTACK) > 0 || creep.getActiveBodyparts(RANGED_ATTACK) > 0;
+  }
+
+  /**
+   * Find next room to explore (adjacent rooms not yet scanned or expired)
+   */
+  private getNextRoomToExplore(): string | null {
+    const adjacentRooms = this.getAdjacentRooms(this.memory.homeRoom);
+
+    const unscannedRooms = adjacentRooms.filter(roomName => {
+      const explorationData = Memory.exploration?.[roomName];
+      if (!explorationData) return true;
+
+      const age = Game.time - explorationData.lastScanned;
+      return age > ExplorerCreep.SCAN_EXPIRY;
+    });
+
+    if (unscannedRooms.length === 0) {
+      debugLog.debug(`[EXPLORER] All adjacent rooms scanned, marking exploration complete`);
+      return null;
+    }
+
+    return unscannedRooms[0];
+  }
+
+  /**
+   * Get adjacent room names from current room
+   */
+  private getAdjacentRooms(roomName: string): string[] {
     const exits = Game.map.describeExits(roomName);
     if (!exits) return [];
     return Object.values(exits);
   }
-
-  const exits = Game.map.describeExits(roomName);
-  if (!exits) return [];
-
-  return Object.values(exits);
 }
 
 /**
- * Check if a creep has attack or ranged attack parts (is an attacker)
+ * Factory export for backward compatibility with existing GameManager
  */
-function isAttacker(creep: Creep): boolean {
-  return creep.getActiveBodyparts(ATTACK) > 0 || creep.getActiveBodyparts(RANGED_ATTACK) > 0;
-}
-
-/**
- * Scan current room for hostiles and update exploration memory
- */
-function scanCurrentRoom(creep: Creep): void {
-  const roomName = creep.room.name;
-  initializeExplorationMemory();
-
-  // Find hostile creeps with attack capabilities
-  const hostiles = creep.room.find(FIND_HOSTILE_CREEPS);
-  const attackers = hostiles.filter(isAttacker);
-
-  // Count sources
-  const sources = creep.room.find(FIND_SOURCES);
-
-  // Check controller
-  const controller = creep.room.controller;
-
-  // Determine safety status
-  let safetyStatus: RoomSafetyStatus;
-  if (attackers.length > 0) {
-    safetyStatus = RoomSafetyStatus.HOSTILE;
-    debugLog.warn(`[EXPLORER] Room ${roomName} is HOSTILE: ${attackers.length} attackers detected`);
-  } else {
-    safetyStatus = RoomSafetyStatus.SAFE;
-    debugLog.debug(`[EXPLORER] Room ${roomName} is SAFE`);
+export default {
+  run: (creep: Creep) => {
+    new ExplorerCreep(creep).run();
   }
-
-  // Update exploration memory
-  const explorationData: RoomExplorationData = {
-    roomName,
-    safetyStatus,
-    lastScanned: Game.time,
-    hostileCount: attackers.length,
-    sourceCount: sources.length,
-    controllerLevel: controller?.level,
-    controllerOwner: controller?.owner?.username || controller?.reservation?.username,
-    explorerName: creep.name,
-    enabledForRemoteHarvest: false
-  };
-if(Memory.exploration) {
-  Memory.exploration[roomName] = explorationData;
-}
-
-  debugLog.debug(`[EXPLORER] Scanned ${roomName}: ${sources.length} sources, ${attackers.length} attackers`);
-}
-
-/**
- * Find next room to explore (adjacent rooms not yet scanned or expired)
- */
-function getNextRoomToExplore(creep: Creep, memory: ExplorerMemory): string | null {
-  const homeRoom = memory.homeRoom;
-  const adjacentRooms = getAdjacentRooms(homeRoom);
-
-  initializeExplorationMemory();
-
-  // Filter out already scanned rooms (within last 5000 ticks)
-  const SCAN_EXPIRY = 5000;
-  const unscannedRooms = adjacentRooms.filter(roomName => {
-    const explorationData = Memory.exploration?.[roomName];
-    if (!explorationData) return true; // Not scanned yet
-
-    const age = Game.time - explorationData.lastScanned;
-    return age > SCAN_EXPIRY; // Expired, needs re-scan
-  });
-
-  if (unscannedRooms.length === 0) {
-    debugLog.debug(`[EXPLORER] All adjacent rooms scanned, marking exploration complete`);
-    return null;
-  }
-
-  // Return first unscanned room
-  return unscannedRooms[0];
-}
-
-/**
- * Main explorer role logic
- */
-export function runExplorer(creep: Creep): void {
-  const memory = creep.memory as ExplorerMemory;
-
-  // Initialize baseline memory
-  if (!memory.homeRoom) {
-    memory.homeRoom = creep.room.name;
-  }
-  if (!memory.scannedRooms) memory.scannedRooms = [];
-  if (memory.isReturning === undefined) memory.isReturning = false;
-  if (memory.explorationComplete === undefined) memory.explorationComplete = false;
-
-  // If currently in target room, perform scan and decide next state
-  if (memory.targetRoom && creep.room.name === memory.targetRoom) {
-    memory.transitionStartTick = undefined;
-    scanCurrentRoom(creep);
-
-    if (!memory.scannedRooms.includes(creep.room.name)) {
-      memory.scannedRooms.push(creep.room.name);
-    }
-
-    const data = Memory.exploration?.[creep.room.name];
-    if (data && data.safetyStatus === RoomSafetyStatus.HOSTILE) {
-      debugLog.warn(`[EXPLORER] ${creep.name} detected hostiles in ${creep.room.name}, returning home`);
-      memory.isReturning = true;
-      memory.targetRoom = undefined;
-    } else {
-      debugLog.debug(`[EXPLORER] ${creep.name} scan complete for ${creep.room.name}, returning home`);
-      memory.isReturning = true;
-      memory.targetRoom = undefined;
-    }
-  }
-
-  // Handle returning to home
-  if (memory.isReturning) {
-    if (creep.room.name === memory.homeRoom) {
-      memory.isReturning = false;
-      memory.targetRoom = undefined;
-      memory.transitionStartTick = undefined;
-    } else {
-      const homePos = new RoomPosition(25, 25, memory.homeRoom);
-      creep.moveTo(homePos, { reusePath: 10 });
-      return;
-    }
-  }
-
-  // If at home and no target, choose next room
-  if (creep.room.name === memory.homeRoom && !memory.targetRoom) {
-    const nextRoom = getNextRoomToExplore(creep, memory);
-    if (!nextRoom) {
-      memory.explorationComplete = true;
-      debugLog.debug(`[EXPLORER] ${creep.name} completed exploration around ${memory.homeRoom}`);
-      return;
-    }
-    memory.targetRoom = nextRoom;
-    memory.transitionStartTick = Game.time;
-    debugLog.debug(`[EXPLORER] ${creep.name} targeting adjacent room ${nextRoom}`);
-  }
-
-  // Move towards target room if set
-  if (memory.targetRoom) {
-    const elapsed = memory.transitionStartTick ? Game.time - memory.transitionStartTick : 0;
-    if (!memory.transitionStartTick) {
-      memory.transitionStartTick = Game.time;
-    }
-
-    if (elapsed > MULTI_ROOM_CONFIG.roomTransitionTimeout) {
-      debugLog.warn(
-        `[EXPLORER] ${creep.name} room transition timeout: ${creep.room.name} → ${memory.targetRoom} ` +
-        `(${elapsed}/${MULTI_ROOM_CONFIG.roomTransitionTimeout} ticks)`
-      );
-      initializeExplorationMemory();
-      if (Memory.exploration) {
-        Memory.exploration[memory.targetRoom] = {
-          roomName: memory.targetRoom,
-          safetyStatus: RoomSafetyStatus.EXPIRED,
-          lastScanned: Game.time,
-          hostileCount: 0,
-          explorerName: creep.name
-        } as RoomExplorationData;
-      }
-      memory.isReturning = true;
-      memory.targetRoom = undefined;
-      memory.transitionStartTick = undefined;
-      return;
-    }
-
-    const onBorder = creep.pos.x === 0 || creep.pos.x === 49 || creep.pos.y === 0 || creep.pos.y === 49;
-    const targetPos = new RoomPosition(25, 25, memory.targetRoom);
-    const moveResult = creep.moveTo(targetPos, { visualizePathStyle: { stroke: '#ffaa00' }, reusePath: 10 });
-
-    if (moveResult !== OK && moveResult !== ERR_TIRED) {
-      debugLog.warn(`[EXPLORER] ${creep.name} moveTo(${memory.targetRoom}) failed with ${moveResult} at ${creep.pos}`);
-    } else if (MULTI_ROOM_CONFIG.debugEnabled && onBorder && Game.time % 20 === 0) {
-      debugLog.debug(`[EXPLORER] ${creep.name} transitioning to ${memory.targetRoom} on border ${creep.pos}`);
-    }
-    return;
-  }
-
-  // Idle near center of home room
-  if (creep.room.name !== memory.homeRoom) {
-    const homePos = new RoomPosition(25, 25, memory.homeRoom);
-    creep.moveTo(homePos, { reusePath: 10 });
-  }
-}
+};
