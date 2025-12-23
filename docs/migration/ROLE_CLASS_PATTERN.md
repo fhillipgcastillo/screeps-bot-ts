@@ -1,7 +1,7 @@
 # Role Class Pattern Blueprint
 
-**Purpose**: Define the standardized class-based architecture for all role implementations  
-**Last Updated**: December 23, 2025  
+**Purpose**: Define the standardized class-based architecture for all role implementations
+**Last Updated**: December 23, 2025
 **Status**: Draft
 
 ---
@@ -132,11 +132,11 @@ import { debugLog } from "./utils/Logger";
 
 /**
  * RoleName Creep Implementation
- * 
+ *
  * Responsibilities:
  * - Primary task (e.g., attack hostile creeps)
  * - Secondary task (e.g., patrol if no targets)
- * 
+ *
  * State Transitions:
  * - IDLE → ATTACKING (when hostile found)
  * - ATTACKING → IDLE (when no hostiles)
@@ -213,7 +213,7 @@ import { debugLog } from "./utils/Logger";
 
 /**
  * Advanced RoleName with Multi-Room Support
- * 
+ *
  * Features:
  * - Multi-room operation with safety checks
  * - Room transition management
@@ -309,14 +309,14 @@ class HarvesterCreep extends SmartCreep {
     if (!this.memory.sourceTarget) {
       return null;
     }
-    
+
     const source = Game.getObjectById(this.memory.sourceTarget);
     if (!source) {
       // Target destroyed, clear stale reference
       delete this.memory.sourceTarget;
       return null;
     }
-    
+
     return source;
   }
 
@@ -446,7 +446,7 @@ interface MultiRoomMemory {
 ```typescript
 private handleRoomTransition(): void {
   const targetRoom = this.memory.multiRoom?.targetRoom;
-  
+
   if (!targetRoom) {
     return;
   }
@@ -504,7 +504,7 @@ class DefenderCreep extends SmartCreep {
 
   public run(): void {
     const target = this.findHostileTarget();
-    
+
     if (target) {
       this.engageTarget(target);
     } else {
@@ -532,7 +532,7 @@ class DefenderCreep extends SmartCreep {
    */
   private engageTarget(target: Creep | Structure): void {
     const attackResult = this.creep.attack(target);
-    
+
     if (attackResult === ERR_NOT_IN_RANGE) {
       this.creep.moveTo(target, {
         visualizePathStyle: { stroke: '#ff0000' }
@@ -624,10 +624,10 @@ class BuilderCreep extends SmartCreep {
    */
   private buildOrRepair(): void {
     const constructionSite = this.findConstructionSite();
-    
+
     if (constructionSite) {
       const buildResult = this.creep.build(constructionSite);
-      
+
       if (buildResult === ERR_NOT_IN_RANGE) {
         this.creep.moveTo(constructionSite, {
           visualizePathStyle: { stroke: '#ffffff' }
@@ -685,7 +685,7 @@ class BuilderCreep extends SmartCreep {
 
     if (damagedStructure) {
       const repairResult = this.creep.repair(damagedStructure);
-      
+
       if (repairResult === ERR_NOT_IN_RANGE) {
         this.creep.moveTo(damagedStructure, {
           visualizePathStyle: { stroke: '#00ff00' }
@@ -700,10 +700,10 @@ class BuilderCreep extends SmartCreep {
    */
   private collectEnergy(): void {
     const target = assignResourceTarget(this.creep, 'builder');
-    
+
     if (target) {
       const withdrawResult = this.creep.withdraw(target as any, RESOURCE_ENERGY);
-      
+
       if (withdrawResult === ERR_NOT_IN_RANGE) {
         this.creep.moveTo(target, {
           visualizePathStyle: { stroke: '#ffaa00' }
@@ -733,7 +733,7 @@ const roleHarvester = {
   run: function(creep: Creep) {
     // logic here
   },
-  
+
   harvest: function(creep: Creep) {
     // harvest logic
   }

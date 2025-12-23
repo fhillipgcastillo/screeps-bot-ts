@@ -10,17 +10,36 @@
 
 ## Migration Status Overview
 
-| File | Complexity | Status | Assignee | Notes |
-|------|-----------|--------|----------|-------|
-| `role.defender.ts` | Simple | 🔴 Not Started | - | Basic combat, no state management |
-| `role.ranger.ts` | Simple | 🔴 Not Started | - | Nearly identical to defender |
-| `role.upgrader.ts` | Simple | 🔴 Not Started | - | **Type mismatch to fix**, commented code |
-| `role.builder.ts` | Moderate | 🔴 Not Started | - | Priority logic, container caching |
-| `role.explorer.ts` | Moderate | 🔴 Not Started | - | **Different export pattern**, multi-state |
-| `role.harvester_stationary.ts` | Complex | 🔴 Not Started | - | Multi-room, profitability checks, 484 lines |
-| `role.hauler.ts` | Complex | 🔴 Not Started | - | Multi-room, dual-phase state, 611 lines |
+| File                           | Complexity | Status        | Assignee | Notes                                       |
+| ------------------------------ | ---------- | ------------- | -------- | ------------------------------------------- |
+| `role.defender.ts`             | Simple     | 🔴 Not Started | -        | Basic combat, no state management           |
+| `role.ranger.ts`               | Simple     | 🔴 Not Started | -        | Nearly identical to defender                |
+| `role.upgrader.ts`             | Simple     | 🔴 Not Started | -        | **Type mismatch to fix**, commented code    |
+| `role.builder.ts`              | Moderate   | 🔴 Not Started | -        | Priority logic, container caching           |
+| `role.explorer.ts`             | Moderate   | 🔴 Not Started | -        | **Different export pattern**, multi-state   |
+| `role.harvester_stationary.ts` | Complex    | 🔴 Not Started | -        | Multi-room, profitability checks, 484 lines |
+| `role.hauler.ts`               | Complex    | 🔴 Not Started | -        | Multi-room, dual-phase state, 611 lines     |
 
 **Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⚠️ Blocked
+
+---
+
+## GameManager Integration Status
+
+| Task                                              | Phase   | Status        | Dependencies       | Notes                       |
+| ------------------------------------------------- | ------- | ------------- | ------------------ | --------------------------- |
+| Dual pattern detection in `runCreep()`            | Phase 1 | 🔴 Not Started | None               | Check prototype vs object   |
+| Feature flag system (`Memory.useClassBasedRoles`) | Phase 1 | 🔴 Not Started | None               | Per-role toggles            |
+| Console commands for role switching               | Phase 1 | 🔴 Not Started | Feature flag       | `enableClassRole()`, etc.   |
+| Role loader utility (`roleLoader.ts`)             | Phase 1 | 🔴 Not Started | None               | Centralized role resolution |
+| Enable Tier 1 roles (defender, ranger, upgrader)  | Phase 2 | 🔴 Not Started | Tier 1 complete    | After testing passes        |
+| Enable Tier 2 roles (builder, explorer)           | Phase 2 | 🔴 Not Started | Tier 2 complete    | After testing passes        |
+| Enable Tier 3 roles (harvester, hauler)           | Phase 2 | 🔴 Not Started | Tier 3 complete    | After testing passes        |
+| Performance monitoring integration                | Phase 2 | 🔴 Not Started | Phase 1            | CPU/memory tracking         |
+| Remove object pattern support                     | Phase 3 | 🔴 Not Started | All tiers complete | Delete old exports          |
+| Simplify `runCreep()` to class-only               | Phase 3 | 🔴 Not Started | Object removal     | Clean up conditional logic  |
+| Remove feature flag system                        | Phase 3 | 🔴 Not Started | All enabled        | No longer needed            |
+| Update external references                        | Phase 3 | 🔴 Not Started | All tiers complete | Tests, docs, etc.           |
 
 ---
 
@@ -103,32 +122,106 @@
 ## Integration Points
 
 ### GameManager.ts Updates
-- [ ] Phase 1: Update `runCreep()` to support both patterns (object methods AND class instances)
-- [ ] Phase 2: Add feature flag for gradual rollout (`Memory.useClassBasedRoles`)
-- [ ] Phase 3: Remove object pattern support after all roles migrated
+
+#### Phase 1: Dual Pattern Support (Week 1-2)
+- [ ] **Update `runCreep()` method** to detect pattern type (object vs class)
+  - Check if role export has `prototype` (class) or is plain object
+  - Support both calling patterns: `role.run(creep)` and `new RoleClass(creep).run()`
+  - Location: [src/GameManager.ts](../../src/GameManager.ts) lines ~80-120
+
+- [ ] **Add feature flag system**
+  - Create `Memory.useClassBasedRoles` object with per-role toggles
+  - Default to `false` for all roles initially
+  - Add console commands: `enableClassRole(roleName)`, `disableClassRole(roleName)`
+  - Location: [src/GameManager.ts](../../src/GameManager.ts) initialization
+
+- [ ] **Implement role loader utility**
+  - Create `getRoleImplementation(role: CreepRole): object | class` helper
+  - Check feature flag first, fallback to original pattern
+  - Cache implementations for performance
+  - Location: New file [src/utils/roleLoader.ts](../../src/utils/roleLoader.ts)
+
+#### Phase 2: Gradual Rollout (Week 2-3)
+- [ ] **Enable class pattern per tier**
+  - After Tier 1 testing complete: Set `Memory.useClassBasedRoles.defender = true`
+  - After Tier 2 testing complete: Enable builder, explorer
+  - After Tier 3 testing complete: Enable harvester, hauler
+
+- [ ] **Monitor performance metrics**
+  - Track CPU usage per role before/after switch
+  - Log memory usage differences
+  - Record any error patterns
+  - Location: [src/utils/multi-room-debug.ts](../../src/utils/multi-room-debug.ts) extensions
+
+#### Phase 3: Cleanup (Week 4)
+- [ ] **Remove object pattern support**
+  - Delete old object exports from role files
+  - Simplify `runCreep()` to only instantiate classes
+  - Remove feature flag system
+  - Location: [src/GameManager.ts](../../src/GameManager.ts) + all role files
+
+- [ ] **Update exports and imports**
+  - Ensure all role files use consistent class export
+  - Update any external references (tests, manual spawner, etc.)
+  - Verify no broken imports remain
+
+### Current Usage Tracking
+
+#### Where Role Patterns Are Used
+
+**Primary Usage:**
+- [ ] **GameManager.ts** - `runCreep()` method (lines ~80-120)
+  - Switch statement dispatches to role implementations
+  - Needs update to support both patterns
+  - **Impact**: Critical path, all creeps flow through here
+
+**Secondary Usage:**
+- [ ] **main.ts** - Indirect usage through GameManager
+  - No direct role imports
+  - **Impact**: None (delegates to GameManager)
+
+- [ ] **Manual Spawner** - No direct role usage
+  - Only creates creeps with role memory
+  - **Impact**: None (memory-only interaction)
+
+**Testing:**
+- [ ] **test/unit/main.test.ts** - May mock role objects
+  - Check for role pattern assumptions in tests
+  - **Impact**: Tests may need updates
+
+**Documentation:**
+- [ ] **copilot-instructions.md** - References role system
+  - Update to reflect class-based pattern
+  - **Impact**: Developer guidance
+
+- [ ] **ROADMAP.md** - Mentions role architecture
+  - Update Phase 1-5 references
+  - **Impact**: Strategic planning alignment
 
 ### Types.ts Alignment
 - [ ] Verify memory interfaces match class properties
 - [ ] Ensure `CreepBrain` abstract class has all required methods
 - [ ] Update `SmartCreep` implementation if needed
+- [ ] Add type guards for role pattern detection
 
 ### Testing Strategy
 - [ ] Unit tests for each converted class (constructor, run(), state transitions)
-- [ ] Integration tests with GameManager
+- [ ] Integration tests with GameManager dual-pattern support
 - [ ] Backward compatibility tests (both patterns coexist)
 - [ ] Performance benchmarks (CPU usage comparison)
+- [ ] Memory structure validation tests
 
 ---
 
 ## Risk Assessment
 
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Breaking existing behavior | Medium | High | Incremental rollout with feature flag |
-| Memory structure incompatibility | Low | Medium | Validate memory interfaces before migration |
-| Performance regression | Low | Low | Benchmark CPU usage before/after |
-| Type system conflicts | Medium | Medium | Align with existing types.ts definitions |
-| Multi-room logic errors | Medium | High | Extensive testing of harvester/hauler |
+| Risk                             | Likelihood | Impact | Mitigation                                  |
+| -------------------------------- | ---------- | ------ | ------------------------------------------- |
+| Breaking existing behavior       | Medium     | High   | Incremental rollout with feature flag       |
+| Memory structure incompatibility | Low        | Medium | Validate memory interfaces before migration |
+| Performance regression           | Low        | Low    | Benchmark CPU usage before/after            |
+| Type system conflicts            | Medium     | Medium | Align with existing types.ts definitions    |
+| Multi-room logic errors          | Medium     | High   | Extensive testing of harvester/hauler       |
 
 ---
 
