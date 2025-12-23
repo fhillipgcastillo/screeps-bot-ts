@@ -1,99 +1,93 @@
-// import * as _ from "lodash";
+import { SmartCreep, CreepStateEnum } from './types';
 import { MULTI_ROOM_CONFIG } from './config/multi-room.config';
-import { findMultiRoomSources, filterDepletedSources } from './utils/multi-room-resources';
-import { isRoomSafe, isRoomAccessible, checkRoomSafetyBeforeEntry } from './utils/room-safety';
+import { findMultiRoomSources } from './utils/multi-room-resources';
+import { checkRoomSafetyBeforeEntry } from './utils/room-safety';
 import { debugLog } from './utils/Logger';
-import { shouldMigrateToNewSource, scoreSourceProfitability } from './utils/sourceProfiler';
+import { shouldMigrateToNewSource } from './utils/sourceProfiler';
 import { isMultiRoomEnabled } from './utils/consoleCommands';
 import { shouldClaimRoom, claimRoom } from './utils/roomClaiming';
 import { assignUniqueTargets } from './utils/resource-distribution';
 import { getCreepsByRole } from './types';
 
-type RoleHarvester = {
-    run: (creep: Creep) => void,
-    getCreepTarget: (creep: Creep) => Source | undefined,
-    harvest: (creep: Creep) => void,
-    storeNewHarvestTarget: (creep: Creep) => void,
-    dropEnergy: (creep: Creep) => void,
-    memorizedPrevTargets: (creep: Creep) => void,
-    cleanUpTargetsState: (creep: Creep) => void,
-    getARandomTarget: (sources: Source[]) => Source | undefined,
-    getClosestTarget: (creep: Creep, targets: any[]) => any,
-    shouldResetPrevTargets: (creep: Creep, targets: any[]) => any,
-    getNextClosestTarget: (creep: Creep, targets: any[]) => any,
-    stateSetter: (creep: Creep) => void,
-    newLogicSourceTarget: (creep: Creep) => Source | null,
-    // Multi-room functions
-    initializeMultiRoomMemory: (creep: Creep) => void,
-    shouldUseMultiRoom: (creep: Creep) => boolean,
-    findMultiRoomTarget: (creep: Creep) => Source | null,
-    handleRoomTransition: (creep: Creep, targetRoom: string) => boolean,
-    resetMultiRoomState: (creep: Creep) => void,
-};
-const roleHarvester: RoleHarvester = {
+/**
+ * HarvesterCreep - Stationary harvester with multi-room support
+ * Harvests energy from sources and drops it for haulers to collect
+ */
+class HarvesterCreep extends SmartCreep {
 
-    /** @param {Creep} creep **/
-    run: function (creep) {
-        // creep.say(creep.name);
-        this.stateSetter(creep);
-        if (creep.store[RESOURCE_ENERGY] > 5) {
-            this.dropEnergy(creep)
-            // } else if (creep.memory.harvesting) {
+    /**
+     * Main run method called each tick
+     */
+    public run(): void {
+        this.initializeMultiRoomMemory();
+        this.setState(CreepStateEnum.HARVESTING);
+        this.handleTask();
+    }
+
+    /**
+     * Handle harvesting task
+     */
+    public override harvest(): void {
+        if (this.creep.store[RESOURCE_ENERGY] > 5) {
+            this.dropEnergy();
         } else {
-            this.harvest(creep);
+            this.executeHarvest();
         }
-    },
-    getCreepTarget: function (creep) {
-        var sources = creep.room.find(FIND_SOURCES);
-        return _.find(sources, (source) => _.isEqual(source.id, creep.memory.sourceTarget));
-    },
-    newLogicSourceTarget: function (creep) {
-        this.initializeMultiRoomMemory(creep);
+    }
+    /**
+     * Get the currently targeted source from memory
+     */
+    private getCreepTarget(): Source | undefined {
+        const sources = this.creep.room.find(FIND_SOURCES);
+        return _.find(sources, (source) => _.isEqual(source.id, this.memory.sourceTarget));
+    }
+    /**
+     * Find and select the best source target using multi-room logic
+     */
+    private findSourceTarget(): Source | null {
+        this.initializeMultiRoomMemory();
 
         // Distribution-first targeting when enabled
         if (MULTI_ROOM_CONFIG.useDistribution) {
-            const homeRoom = creep.memory.multiRoom?.homeRoom || creep.room.name;
+            const homeRoom = this.memory.multiRoom?.homeRoom || this.creep.room.name;
             const harvesters = getCreepsByRole('harvester').filter(h => (h.memory.multiRoom?.homeRoom || h.room.name) === homeRoom);
 
             // Determine candidate sources (multi-room if allowed)
             let sources: Source[] = [];
-            if (this.shouldUseMultiRoom(creep)) {
+            if (this.shouldUseMultiRoom()) {
                 const multiRoomSources = findMultiRoomSources(homeRoom);
                 sources = multiRoomSources.map(s => s.source);
             } else {
-                sources = creep.room.find(FIND_SOURCES);
+                sources = this.creep.room.find(FIND_SOURCES);
             }
 
             if (sources.length === 0 || harvesters.length === 0) {
-                this.cleanUpTargetsState(creep);
+                this.cleanUpTargetsState();
                 return null;
             }
 
             assignUniqueTargets(harvesters, sources);
-            const assigned = creep.memory.sourceTarget ? Game.getObjectById(creep.memory.sourceTarget as Id<Source>) : null;
+            const assigned = this.memory.sourceTarget ? Game.getObjectById(this.memory.sourceTarget as Id<Source>) : null;
             if (!assigned && MULTI_ROOM_CONFIG.debugEnabled) {
-                debugLog.warn(`${creep.name} distribution assignment failed`);
+                debugLog.warn(`${this.creep.name} distribution assignment failed`);
             }
             return assigned;
         }
 
-        // Initialize multi-room memory
-        this.initializeMultiRoomMemory(creep);
-
         // Periodic profitability check for migration (every 50 ticks)
-        const shouldCheckProfitability = !creep.memory.multiRoom?.lastProfitabilityCheck ||
-            (Game.time - creep.memory.multiRoom.lastProfitabilityCheck) >= MULTI_ROOM_CONFIG.sourceProfitabilityCheckInterval;
+        const shouldCheckProfitability = !this.memory.multiRoom?.lastProfitabilityCheck ||
+            (Game.time - this.memory.multiRoom.lastProfitabilityCheck) >= MULTI_ROOM_CONFIG.sourceProfitabilityCheckInterval;
 
-        if (shouldCheckProfitability && creep.memory.sourceTarget) {
-            const currentSource = Game.getObjectById(creep.memory.sourceTarget as Id<Source>);
+        if (shouldCheckProfitability && this.memory.sourceTarget) {
+            const currentSource = Game.getObjectById(this.memory.sourceTarget as Id<Source>);
 
-            if (currentSource && this.shouldUseMultiRoom(creep)) {
+            if (currentSource && this.shouldUseMultiRoom()) {
                 // Get all available sources (multi-room and single-room)
-                const multiRoomSources = findMultiRoomSources(creep.memory.multiRoom?.homeRoom || creep.room.name);
+                const multiRoomSources = findMultiRoomSources(this.memory.multiRoom?.homeRoom || this.creep.room.name);
                 const allSources = multiRoomSources.map(s => s.source);
 
                 // Add local sources as fallback
-                const localSources = creep.room.find(FIND_SOURCES);
+                const localSources = this.creep.room.find(FIND_SOURCES);
                 localSources.forEach(s => {
                     if (!allSources.find(existing => existing.id === s.id)) {
                         allSources.push(s);
@@ -101,226 +95,180 @@ const roleHarvester: RoleHarvester = {
                 });
 
                 // Check if migration is beneficial
-                if (shouldMigrateToNewSource(currentSource, allSources, creep)) {
-                    debugLog.info(`${creep.name} triggering migration from depleted source`);
-                    creep.memory.sourceTarget = undefined; // Force new target selection
-                    creep.memory.multiRoom!.lastProfitabilityCheck = Game.time;
+                if (shouldMigrateToNewSource(currentSource, allSources, this.creep)) {
+                    debugLog.info(`${this.creep.name} triggering migration from depleted source`);
+                    this.memory.sourceTarget = undefined;
+                    this.memory.multiRoom!.lastProfitabilityCheck = Game.time;
                 }
             }
 
             // Update check timestamp
-            if (creep.memory.multiRoom) {
-                creep.memory.multiRoom.lastProfitabilityCheck = Game.time;
+            if (this.memory.multiRoom) {
+                this.memory.multiRoom.lastProfitabilityCheck = Game.time;
             }
         }
 
         // Try multi-room target first if enabled and appropriate
-        if (this.shouldUseMultiRoom(creep)) {
-            const multiRoomTarget = this.findMultiRoomTarget(creep);
+        if (this.shouldUseMultiRoom()) {
+            const multiRoomTarget = this.findMultiRoomTarget();
             if (multiRoomTarget) {
                 // Handle room transition if needed
-                const targetRoom = creep.memory.multiRoom?.targetRoom;
-                if (targetRoom && targetRoom !== creep.room.name) {
-                    if (this.handleRoomTransition(creep, targetRoom)) {
+                const targetRoom = this.memory.multiRoom?.targetRoom;
+                if (targetRoom && targetRoom !== this.creep.room.name) {
+                    if (this.handleRoomTransition(targetRoom)) {
                         return multiRoomTarget;
                     }
-                    // If transition failed, fall back to single-room logic
                 } else {
-                    // Already in target room or same room
                     return multiRoomTarget;
                 }
             }
         }
 
         // Fall back to original single-room logic
-        var sources = creep.room.find(FIND_SOURCES);
+        let sources = this.creep.room.find(FIND_SOURCES);
         if (sources.length === 0) return null;
 
-        if (creep.memory.sourceTargetId && creep.memory.lastStep) {
-            // find others targets = omit current target
-            sources = sources.filter((s) => s.id !== creep.memory.sourceTarget);
-            creep.memory.sourceTarget = undefined;
+        if (this.memory.sourceTargetId && this.memory.lastStep) {
+            sources = sources.filter((s) => s.id !== this.memory.sourceTarget);
+            this.memory.sourceTarget = undefined;
         }
 
         let target: Source | null = null;
 
-        // assign a new target
-        if (!creep.memory.sourceTarget) {
-            target = creep.pos.findClosestByPath(sources);
-            creep.memory.sourceTarget = target?.id;
+        // Assign a new target
+        if (!this.memory.sourceTarget) {
+            target = this.creep.pos.findClosestByPath(sources);
+            this.memory.sourceTarget = target?.id;
         }
 
-        if (!target && creep.memory.sourceTarget) {
-            target = sources.find(s => s.id === creep.memory.sourceTarget) || null;
+        if (!target && this.memory.sourceTarget) {
+            target = sources.find(s => s.id === this.memory.sourceTarget) || null;
             if (!target) {
-               debugLog.log("not target available");
+                debugLog.log("no target available");
             }
         }
 
         return target;
-    },
-    harvest: function (creep) {
+    }
+    /**
+     * Execute the harvesting action
+     */
+    private executeHarvest(): void {
         try {
-            let sourceTarget = this.newLogicSourceTarget(creep);
+            const sourceTarget = this.findSourceTarget();
 
-            // const mapExits = Game.map.describeExits("W52S5")
             if (sourceTarget) {
-                var harvestAction = creep.harvest(sourceTarget);
+                const harvestAction = this.creep.harvest(sourceTarget);
 
                 if (harvestAction === ERR_NOT_IN_RANGE) {
-                    // creep.say("Moving...");
-                    let movingError = creep.moveTo(sourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
+                    const movingError = this.creep.moveTo(sourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
                     if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
-                       debugLog.log("Hvst mv2 ERR_NO_PATH", movingError); //most commont error when there's a lot of creeps
-                        creep.say("NO Pth")
-                        this.cleanUpTargetsState(creep);
-                        let targets = creep.room.find(FIND_SOURCES);
-
-                        this.getNextClosestTarget(creep, targets)
-
+                        debugLog.log("Hvst mv2 ERR_NO_PATH", movingError);
+                        this.creep.say("NO Pth");
+                        this.cleanUpTargetsState();
+                        const targets = this.creep.room.find(FIND_SOURCES);
+                        this.getNextClosestTarget(targets);
                     }
                 } else if (harvestAction === ERR_INVALID_TARGET) {
-                   debugLog.log("Hvst ERR_INVALID_TARGET");
-                    creep.say("INV Tgt")
-                    this.cleanUpTargetsState(creep);
+                    debugLog.log("Hvst ERR_INVALID_TARGET");
+                    this.creep.say("INV Tgt");
+                    this.cleanUpTargetsState();
                 } else if (harvestAction !== OK) {
-                   debugLog.log(`${creep.name} Hvst Another error`, harvestAction);
-                    this.cleanUpTargetsState(creep);
+                    debugLog.log(`${this.creep.name} Hvst Another error`, harvestAction);
+                    this.cleanUpTargetsState();
                 }
             } else {
-                this.cleanUpTargetsState(creep);
+                this.cleanUpTargetsState();
             }
         } catch (error) {
-           debugLog.log("harvest error", error)
+            debugLog.log("harvest error", error);
         }
-    },
-    storeNewHarvestTarget(creep) {
-        this.cleanUpTargetsState(creep);
+    }
+    /**
+     * Drop energy for haulers to collect
+     */
+    private dropEnergy(): void {
+        this.creep.drop(RESOURCE_ENERGY, 5);
+    }
 
-        // Try multi-room target first if enabled
-        if (this.shouldUseMultiRoom(creep)) {
-            const multiRoomTarget = this.findMultiRoomTarget(creep);
-            if (multiRoomTarget) {
-                creep.memory.sourceTarget = multiRoomTarget.id;
-                return;
-            }
-        }
+    /**
+     * Clean up current target state
+     */
+    private cleanUpTargetsState(): void {
+        this.memory.prevSourceTarget = this.memory.sourceTarget;
+        this.memory.sourceTarget = undefined;
+    }
 
-        // Fall back to single-room logic
-        var targets = creep.room.find(FIND_SOURCES);
-        var nextClosestTaret = this.getNextClosestTarget(creep, targets)
+    /**
+     * Get closest target from available targets
+     */
+    private getClosestTarget(targets: Source[]): Source | undefined {
+        return this.creep.pos.findClosestByRange(targets) || undefined;
+    }
 
-        creep.memory.sourceTarget = nextClosestTaret.id;
-
-        // if (creep.harvest(nextClosestTaret) === ERR_NOT_IN_RANGE) {
-        //     creep.moveTo(nextClosestTaret, { visualizePathStyle: { stroke: '#ffaa00' } });
-        // }
-    },
-    dropEnergy(creep) {
-        creep.drop(RESOURCE_ENERGY, 5)
-    },
-    memorizedPrevTargets(creep) {
-        if (!creep.memory?.prevTargets) {
-            creep.memory.prevTargets = []
-        }
-        if (creep.memory.sourceTarget) {
-            creep.memory.prevTargets.push(creep.memory.sourceTarget);
-        }
-    },
-    cleanUpTargetsState(creep) {
-        // this.memorizedPrevTargets(creep);
-        creep.memory.prevSourceTarget = creep.memory.sourceTarget;
-        creep.memory.sourceTarget = undefined;
-    },
-    getARandomTarget(sources) {
-        const creepSourceTarget = _.sample(sources);
-        return creepSourceTarget;
-    },
-    getClosestTarget(creep, targets) {
-        var nextClosestTaret = creep.pos.findClosestByRange(targets)
-        return nextClosestTaret;
-    },
-    shouldResetPrevTargets(creep, targets) {
-        if (creep.memory?.prevTargets && creep.memory?.prevTargets.length === targets.length) {
-            creep.memory.prevTargets = [];
-        }
-    },
-    getNextClosestTarget(creep, targets) {
-        let availableTargets = _.filter(targets, (source) => source.id !== creep.memory.sourceTarget);
-        let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
-        return nextClosestTaret
-    },
-    stateSetter: function (creep) {
-        //state handler
-        if (creep.store.getFreeCapacity() > 0 && !creep.memory.transfering) {
-            creep.memory.harvesting = true;
-            creep.memory.transfering = false;
-
-        } else if (creep.store.energy === 0 && creep.memory.transfering) {
-            creep.memory.transfering = false;
-            creep.memory.harvesting = true;
-        }
-    },
+    /**
+     * Get next closest target excluding current target
+     */
+    private getNextClosestTarget(targets: Source[]): Source | undefined {
+        const availableTargets = _.filter(targets, (source) => source.id !== this.memory.sourceTarget);
+        return this.getClosestTarget(availableTargets);
+    }
 
     // ============================================================================
     // MULTI-ROOM FUNCTIONS
     // ============================================================================
 
     /**
-     * Initializes multi-room memory for a creep
+     * Initialize multi-room memory
      */
-    initializeMultiRoomMemory: function (creep) {
-        if (!creep.memory.multiRoom) {
-            creep.memory.multiRoom = {
-                enabled: isMultiRoomEnabled(),  // Use current toggle state, not static config
-                homeRoom: creep.room.name,
+    private initializeMultiRoomMemory(): void {
+        if (!this.memory.multiRoom) {
+            this.memory.multiRoom = {
+                enabled: isMultiRoomEnabled(),
+                homeRoom: this.creep.room.name,
                 isMultiRoom: false,
                 failureCount: 0
             };
         }
-    },
+    }
 
     /**
-     * Determines if a creep should use multi-room operations
+     * Check if creep should use multi-room operations
      */
-    shouldUseMultiRoom: function (creep) {
-        this.initializeMultiRoomMemory(creep);
+    private shouldUseMultiRoom(): boolean {
+        this.initializeMultiRoomMemory();
 
-        // Check if multi-room is globally enabled (respects console toggle)
-        if (!isMultiRoomEnabled() || !creep.memory.multiRoom?.enabled) {
+        if (!isMultiRoomEnabled() || !this.memory.multiRoom?.enabled) {
             return false;
         }
 
-        // Check if creep has sufficient capacity
-        if (creep.store.getCapacity() < MULTI_ROOM_CONFIG.minCreepCapacity) {
+        if (this.creep.store.getCapacity() < MULTI_ROOM_CONFIG.minCreepCapacity) {
             return false;
         }
 
-        // Check failure count
-        if (creep.memory.multiRoom.failureCount >= MULTI_ROOM_CONFIG.maxFailures) {
+        if (this.memory.multiRoom.failureCount >= MULTI_ROOM_CONFIG.maxFailures) {
             return false;
         }
 
-        // Check if enough time has passed since last failure
         const now = Game.time;
-        if (creep.memory.multiRoom.lastMultiRoomAttempt &&
-            (now - creep.memory.multiRoom.lastMultiRoomAttempt) < 100) {
+        if (this.memory.multiRoom.lastMultiRoomAttempt &&
+            (now - this.memory.multiRoom.lastMultiRoomAttempt) < 100) {
             return false;
         }
 
         return true;
-    },
+    }
 
     /**
-     * Finds a multi-room target for the creep
+     * Find a multi-room target source
      */
-    findMultiRoomTarget: function (creep) {
-        if (!this.shouldUseMultiRoom(creep)) {
+    private findMultiRoomTarget(): Source | null {
+        if (!this.shouldUseMultiRoom()) {
             return null;
         }
 
         try {
-            const homeRoom = creep.memory.multiRoom?.homeRoom || creep.room.name;
+            const homeRoom = this.memory.multiRoom?.homeRoom || this.creep.room.name;
             const multiRoomSources = findMultiRoomSources(homeRoom);
 
             if (multiRoomSources.length === 0) {
@@ -342,10 +290,10 @@ const roleHarvester: RoleHarvester = {
             const targetSource = targetSourceInfo.source;
 
             // Update creep memory
-            if (creep.memory.multiRoom) {
-                creep.memory.multiRoom.targetRoom = targetSourceInfo.roomName;
-                creep.memory.multiRoom.isMultiRoom = targetSourceInfo.roomName !== homeRoom;
-                creep.memory.multiRoom.lastMultiRoomAttempt = Game.time;
+            if (this.memory.multiRoom) {
+                this.memory.multiRoom.targetRoom = targetSourceInfo.roomName;
+                this.memory.multiRoom.isMultiRoom = targetSourceInfo.roomName !== homeRoom;
+                this.memory.multiRoom.lastMultiRoomAttempt = Game.time;
             }
 
             // Evaluate claiming the target room if configured
@@ -361,71 +309,71 @@ const roleHarvester: RoleHarvester = {
                 const decision = shouldClaimRoom(targetSourceInfo.roomName, criteria, homeRoom);
                 if (decision.canClaim) {
                     claimRoom(targetSourceInfo.roomName, homeRoom);
-                    if (MULTI_ROOM_CONFIG.debugEnabled) debugLog.info(`${creep.name} claimed room ${targetSourceInfo.roomName}`);
+                    if (MULTI_ROOM_CONFIG.debugEnabled) {
+                        debugLog.info(`${this.creep.name} claimed room ${targetSourceInfo.roomName}`);
+                    }
                 }
             }
 
             if (MULTI_ROOM_CONFIG.debugEnabled) {
-                debugLog.debug(`${creep.name} targeting multi-room source in ${targetSourceInfo.roomName}`);
+                debugLog.debug(`${this.creep.name} targeting multi-room source in ${targetSourceInfo.roomName}`);
             }
 
             return targetSource;
 
         } catch (error) {
-            debugLog.warn(`Error finding multi-room target for ${creep.name}:`, error);
-            this.resetMultiRoomState(creep);
+            debugLog.warn(`Error finding multi-room target for ${this.creep.name}:`, error);
+            this.resetMultiRoomState();
             return null;
         }
-    },
+    }
 
     /**
-     * Handles room transitions for multi-room operations
+     * Handle room transitions for multi-room operations
      */
-    handleRoomTransition: function (creep, targetRoom) {
-        const currentRoom = creep.room.name;
+    private handleRoomTransition(targetRoom: string): boolean {
+        const currentRoom = this.creep.room.name;
 
         // If already in target room, no transition needed
         if (currentRoom === targetRoom) {
-            // Clear transition timer if we made it
-            if (creep.memory.multiRoom?.roomTransitionStartTick) {
+            if (this.memory.multiRoom?.roomTransitionStartTick) {
                 if (MULTI_ROOM_CONFIG.debugEnabled) {
-                    const duration = Game.time - creep.memory.multiRoom.roomTransitionStartTick;
-                    debugLog.debug(`${creep.name} reached ${targetRoom} in ${duration} ticks`);
+                    const duration = Game.time - this.memory.multiRoom.roomTransitionStartTick;
+                    debugLog.debug(`${this.creep.name} reached ${targetRoom} in ${duration} ticks`);
                 }
-                delete creep.memory.multiRoom.roomTransitionStartTick;
+                delete this.memory.multiRoom.roomTransitionStartTick;
             }
             return true;
         }
 
-        // Real-time safety check before committing to transition
-        if (!checkRoomSafetyBeforeEntry(targetRoom) || !isRoomAccessible(currentRoom, targetRoom)) {
+        // Real-time safety check
+        if (!checkRoomSafetyBeforeEntry(targetRoom)) {
             if (MULTI_ROOM_CONFIG.debugEnabled) {
-                debugLog.warn(`${creep.name} cannot access ${targetRoom} (safety/accessibility failed)`);
+                debugLog.warn(`${this.creep.name} cannot access ${targetRoom} (safety failed)`);
             }
-            this.resetMultiRoomState(creep);
+            this.resetMultiRoomState();
             return false;
         }
 
         // Check for transition timeout
-        if (creep.memory.multiRoom?.roomTransitionStartTick) {
-            const transitionTime = Game.time - creep.memory.multiRoom.roomTransitionStartTick;
+        if (this.memory.multiRoom?.roomTransitionStartTick) {
+            const transitionTime = Game.time - this.memory.multiRoom.roomTransitionStartTick;
             if (transitionTime > MULTI_ROOM_CONFIG.roomTransitionTimeout) {
                 debugLog.warn(
-                    `${creep.name} room transition TIMEOUT: ${currentRoom} → ${targetRoom} ` +
+                    `${this.creep.name} room transition TIMEOUT: ${currentRoom} → ${targetRoom} ` +
                     `(${transitionTime}/${MULTI_ROOM_CONFIG.roomTransitionTimeout} ticks)`
                 );
-                this.resetMultiRoomState(creep);
+                this.resetMultiRoomState();
                 return false;
             } else if (MULTI_ROOM_CONFIG.debugEnabled && transitionTime % 20 === 0) {
-                // Log progress every 20 ticks
-                debugLog.debug(`${creep.name} transitioning: ${currentRoom} → ${targetRoom} (${transitionTime}t)`);
+                debugLog.debug(`${this.creep.name} transitioning: ${currentRoom} → ${targetRoom} (${transitionTime}t)`);
             }
         } else {
             // Start transition timer
-            if (creep.memory.multiRoom) {
-                creep.memory.multiRoom.roomTransitionStartTick = Game.time;
+            if (this.memory.multiRoom) {
+                this.memory.multiRoom.roomTransitionStartTick = Game.time;
                 if (MULTI_ROOM_CONFIG.debugEnabled) {
-                    debugLog.info(`${creep.name} starting room transition: ${currentRoom} → ${targetRoom}`);
+                    debugLog.info(`${this.creep.name} starting room transition: ${currentRoom} → ${targetRoom}`);
                 }
             }
         }
@@ -434,19 +382,19 @@ const roleHarvester: RoleHarvester = {
         try {
             const exitDirection = Game.map.findExit(currentRoom, targetRoom);
             if (exitDirection === ERR_NO_PATH || exitDirection === ERR_INVALID_ARGS) {
-                this.resetMultiRoomState(creep);
+                this.resetMultiRoomState();
                 return false;
             }
 
-            const exit = creep.pos.findClosestByRange(exitDirection);
+            const exit = this.creep.pos.findClosestByRange(exitDirection);
             if (exit) {
-                const moveResult = creep.moveTo(exit, {
+                const moveResult = this.creep.moveTo(exit, {
                     visualizePathStyle: { stroke: '#00ff00' },
                     reusePath: 10
                 });
 
                 if (moveResult === ERR_NO_PATH) {
-                    this.resetMultiRoomState(creep);
+                    this.resetMultiRoomState();
                     return false;
                 }
             }
@@ -454,30 +402,34 @@ const roleHarvester: RoleHarvester = {
             return true;
 
         } catch (error) {
-            debugLog.warn(`Error handling room transition for ${creep.name}:`, error);
-            this.resetMultiRoomState(creep);
+            debugLog.warn(`Error handling room transition for ${this.creep.name}:`, error);
+            this.resetMultiRoomState();
             return false;
         }
-    },
+    }
 
     /**
-     * Resets multi-room state and increments failure count
+     * Reset multi-room state and increment failure count
      */
-    resetMultiRoomState: function (creep) {
-        if (creep.memory.multiRoom) {
-            creep.memory.multiRoom.isMultiRoom = false;
-            creep.memory.multiRoom.targetRoom = undefined;
-            creep.memory.multiRoom.roomTransitionStartTick = undefined;
-            creep.memory.multiRoom.failureCount++;
+    private resetMultiRoomState(): void {
+        if (this.memory.multiRoom) {
+            this.memory.multiRoom.isMultiRoom = false;
+            this.memory.multiRoom.targetRoom = undefined;
+            this.memory.multiRoom.roomTransitionStartTick = undefined;
+            this.memory.multiRoom.failureCount++;
 
             if (MULTI_ROOM_CONFIG.debugEnabled) {
-                debugLog.debug(`${creep.name} multi-room state reset, failures: ${creep.memory.multiRoom.failureCount}`);
+                debugLog.debug(`${this.creep.name} multi-room state reset, failures: ${this.memory.multiRoom.failureCount}`);
             }
         }
 
-        // Clear current target to force new target selection
-        this.cleanUpTargetsState(creep);
-    },
-};
+        this.cleanUpTargetsState();
+    }
+}
 
-export default roleHarvester;
+/**
+ * Factory export for harvester role
+ */
+export default {
+    run: (creep: Creep) => new HarvesterCreep(creep).run()
+};

@@ -3,9 +3,9 @@
 **Migration Goal**: Convert all role-based files from object-with-methods pattern to TypeScript class-based implementations
 
 **Start Date**: December 23, 2025
-**Status**: In Progress (Tier 2 Complete ✅)
+**Status**: Complete (All Tiers Complete ✅)
 **Strategy**: Incremental (by complexity tier)
-**Last Updated**: December 23, 2025 - Tier 2 migration complete
+**Last Updated**: December 23, 2025 - Tier 3 migration complete
 
 ---
 
@@ -18,8 +18,8 @@
 | `role.upgrader.ts`             | Simple     | 🟢 Complete    | -        | Migrated to class, type mismatch fixed, commented code removed   |
 | `role.builder.ts`              | Moderate   | � Complete    | -        | Migrated to class, commented code removed, hardcoded ref removed |
 | `role.explorer.ts`             | Moderate   | 🟢 Complete    | -        | Migrated to class, export standardized, multi-state preserved    |
-| `role.harvester_stationary.ts` | Complex    | 🔴 Not Started | -        | Multi-room, profitability checks, 484 lines                      |
-| `role.hauler.ts`               | Complex    | 🔴 Not Started | -        | Multi-room, dual-phase state, 611 lines                          |
+| `role.harvester_stationary.ts` | Complex    | � Complete    | -        | Migrated to class, multi-room logic preserved, 484→558 lines     |
+| `role.hauler.ts`               | Complex    | 🟢 Complete    | -        | Migrated to class, dual-phase state preserved, 611→556 lines     |
 
 **Legend**: 🔴 Not Started | 🟡 In Progress | 🟢 Complete | ⚠️ Blocked
 
@@ -100,22 +100,30 @@
   - ✅ Fixed TypeScript strict null checks on scannedRooms initialization
   - ✅ Improved state transitions with clear method separation
 
-### Tier 3: Complex Multi-Room (2 files)
+### Tier 3: Complex Multi-Room (2 files) ✅ COMPLETE
 **Priority**: Low (High risk, high value)
 **Estimated Effort**: 4-6 hours total
 **Dependencies**: Tier 1 & 2 complete, GameManager integration tested
+**Status**: Complete (December 23, 2025)
 
-- [ ] **role.harvester_stationary.ts** (484 lines)
-  - Current: Object with advanced multi-room logic
-  - Target: Class extending `Harvester` (from types.ts)
-  - Risks: Multi-room state management, profitability checks, auto-claiming integration
-  - Special Notes: Most sophisticated role, distribution-first targeting, room transitions
+- [x] **role.harvester_stationary.ts** (484 lines → 558 lines)
+  - ✅ Converted to class extending `SmartCreep`
+  - ✅ Preserved all multi-room logic (transitions, timeout tracking, safety checks)
+  - ✅ Maintained distribution-first targeting (assignUniqueTargets integration)
+  - ✅ Preserved source profitability checking (shouldMigrateToNewSource every 50 ticks)
+  - ✅ Maintained room claiming logic (auto-claim with criteria checks)
+  - ✅ Removed unused methods (storeNewHarvestTarget, memorizedPrevTargets, getARandomTarget)
+  - ✅ Added proper state management using CreepStateEnum.HARVESTING
 
-- [ ] **role.hauler.ts** (611 lines)
-  - Current: Object with dual-phase state machine, multi-room support
-  - Target: Class extending `Hauler` (from types.ts)
-  - Risks: Complex transfer priority logic, return journey tracking
-  - Special Notes: Longest file, handles tombstones/ruins/drops, extensive debugging
+- [x] **role.hauler.ts** (611 lines → 556 lines)
+  - ✅ Converted to class extending `SmartCreep`
+  - ✅ Preserved dual-phase state machine (haulering ↔ transferring)
+  - ✅ Maintained multi-room collection logic with return-to-home navigation
+  - ✅ Preserved priority transfer logic (extensions > spawns > towers > storage > containers)
+  - ✅ Integrated distribution system (assignCollectionTargetsToHaulers)
+  - ✅ Added all utility methods (withdrawRemains, getAppropriateResourceTarget, findSpawn, cleanUpTargetsState)
+  - ✅ Fixed eCreepState type to include "TRANSFERRING"
+  - ✅ Added proper state management using CreepStateEnum.HAULING and TRANSFERRING
 
 ---
 
@@ -291,12 +299,8 @@
 - **Week 3 (Jan 6-12, 2026)**: Tier 3 (Complex multi-room) + testing
 - **Week 4 (Jan 13-19, 2026)**: GameManager Phase 2-3, documentation, cleanup, final testing
 
-**Target Completion**: January 19, 2026
-**Progress**: 3/7 role files migrated (43%) 2 (Moderate complexity) + GameManager integration
-- **Week 3 (Jan 6-12, 2026)**: Tier 3 (Complex multi-room) + testing
-- **Week 4 (Jan 13-19, 2026)**: Documentation, cleanup, final testing
-
-**Target Completion**: January 19, 2026
+**Target Completion**: December 23, 2025 ✅ COMPLETE
+**Progress**: 7/7 role files migrated (100%) ✅
 
 ---
 
