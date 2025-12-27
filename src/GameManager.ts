@@ -1,12 +1,12 @@
 import SpawnManager from "./spawn.manager";
 import { ManualSpawner, getManualSpawner } from "./manual.spawner";
-import roleHarvester from "./role.harvester_stationary";
-import roleHauler from "./role.hauler";
-import roleUpgrader from "./role.upgrader";
-import roleBuilder from "./role.builder";
-import roleExplorer from "role.explorer";
-import roleDefender from "role.defender";
-import roleRanger from "role.ranger";
+import { RoleHarvester } from "./role.harvester_stationary";
+import { RoleHauler } from "./role.hauler";
+import { RoleUpgrader } from "./role.upgrader";
+import { RoleBuilder } from "./role.builder";
+import { RoleExplorer } from "./role.explorer";
+import { RoleDefender } from "./role.defender";
+import { RoleRanger } from "./role.ranger";
 import { CreepRoleEnum, isValidCreepRole } from "./types";
 import { updateVisualOverlay } from "./ui";
 import { logger, debugLog } from "./utils/Logger";
@@ -21,10 +21,28 @@ export class GameManager {
   public spawnManager: SpawnManager;
   public manualSpawner: ManualSpawner;
 
+  // Role handler instances
+  private roleHarvester: RoleHarvester;
+  private roleHauler: RoleHauler;
+  private roleUpgrader: RoleUpgrader;
+  private roleBuilder: RoleBuilder;
+  private roleExplorer: RoleExplorer;
+  private roleDefender: RoleDefender;
+  private roleRanger: RoleRanger;
+
   constructor() {
     this.gameState = "initialized";
     this.spawnManager = new SpawnManager();
     this.manualSpawner = getManualSpawner(this.spawnManager);
+
+    // Initialize role handler instances
+    this.roleHarvester = new RoleHarvester();
+    this.roleHauler = new RoleHauler();
+    this.roleUpgrader = new RoleUpgrader();
+    this.roleBuilder = new RoleBuilder();
+    this.roleExplorer = new RoleExplorer();
+    this.roleDefender = new RoleDefender();
+    this.roleRanger = new RoleRanger();
 
     // Initialize logger with debug state
     logger.setDebug(this.debug);
@@ -100,25 +118,25 @@ export class GameManager {
 
     switch (creep.memory.role) {
       case CreepRoleEnum.HARVESTER:
-        roleHarvester.run(creep);
+        this.roleHarvester.run(creep);
         break;
       case CreepRoleEnum.HAULER:
-        roleHauler.run(creep);
+        this.roleHauler.run(creep);
         break;
       case CreepRoleEnum.UPGRADER:
-        roleUpgrader.run(creep);
+        this.roleUpgrader.run(creep);
         break;
       case CreepRoleEnum.BUILDER:
-        roleBuilder.run(creep);
+        this.roleBuilder.run(creep);
         break;
       case CreepRoleEnum.DEFENDER:
-        roleDefender.run(creep);
+        this.roleDefender.run(creep);
         break;
       case CreepRoleEnum.RANGER:
-        roleRanger.run(creep);
+        this.roleRanger.run(creep);
         break;
       case CreepRoleEnum.EXPLORER:
-        roleExplorer.run(creep, spawn);
+        this.roleExplorer.run(creep, spawn);
         break;
       default:
         // This should never happen due to the type guard above, but keeping for safety

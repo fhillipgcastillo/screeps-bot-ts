@@ -17,6 +17,7 @@ function findOtherRoomsRoutes(spawn: StructureSpawn) {
   }
   return exitsRoutes;
 }
+
 function findOtherRoomsExits(spawn: StructureSpawn) {
   const spawnRoom = spawn.room.name;
   const exits = getExitRoomNames(spawnRoom);
@@ -86,35 +87,34 @@ function findRoomExits(creep:Creep, spawn:StructureSpawn) {
   return sortPositionsByDistance(creep, allExitInfo)
 }
 
-function explorer(creep: Creep, spawn: StructureSpawn) {
-  creep.say("Expr");
-  if (creep.room.name === spawn.room.name) {
-    // console.log("findind exits");
-    const exits = getExitRoomNames(spawn.room.name);
-    let exitsPositions: RoomPosition[] = findRoomExits(creep, spawn);
-    const target = exitsPositions[0];
-    // const exit = creep.pos.findClosestByRange(Object.values(exits)[0]);
-    // creep.moveTo(exit, { visualizePathStyle: { stroke: '#0066ff' } });
-    creep.moveByPath(creep.pos.findPathTo(target));
-  } else {
-    let foundSources = creep.room.find(FIND_SOURCES);
-    debugLog.debug("found source", foundSources)
-    if (!creep.memory.sourceTarget) {
-      let sourceTarget = creep.pos.findClosestByRange(foundSources);
-      if (sourceTarget &&  creep.memory.nextRole) {
-        creep.memory.role = creep.memory.nextRole;
-        // creep.memory.nextRole = "harvester";
-        // creep.memory.sourceTarget = sourceTarget?.id;
-        creep.moveTo(sourceTarget)
+export class RoleExplorer {
+  public run(creep: Creep, spawn: StructureSpawn): void {
+    creep.say("Expr");
+    if (creep.room.name === spawn.room.name) {
+      // console.log("findind exits");
+      const exits = getExitRoomNames(spawn.room.name);
+      let exitsPositions: RoomPosition[] = findRoomExits(creep, spawn);
+      const target = exitsPositions[0];
+      // const exit = creep.pos.findClosestByRange(Object.values(exits)[0]);
+      // creep.moveTo(exit, { visualizePathStyle: { stroke: '#0066ff' } });
+      creep.moveByPath(creep.pos.findPathTo(target));
+    } else {
+      let foundSources = creep.room.find(FIND_SOURCES);
+      debugLog.debug("found source", foundSources)
+      if (!creep.memory.sourceTarget) {
+        let sourceTarget = creep.pos.findClosestByRange(foundSources);
+        if (sourceTarget &&  creep.memory.nextRole) {
+          creep.memory.role = creep.memory.nextRole;
+          // creep.memory.nextRole = "harvester";
+          // creep.memory.sourceTarget = sourceTarget?.id;
+          creep.moveTo(sourceTarget)
+        }
+
+      } else {
+        // creep.moveTo(sourceTarget)
       }
 
-    } else {
-      // creep.moveTo(sourceTarget)
     }
-
   }
 }
 
-export default {
-  run: explorer,
-}

@@ -1,23 +1,6 @@
 // import * as _ from "lodash";
 import { debugLog } from "./utils/Logger";
 
-type RoleHauler = {
-  spawn?: StructureSpawn,
-  run: (creep: Creep) => void,
-  // getCreepTarget: (creep:Creep) => Source | undefined,
-  hauler: (creep: Creep) => void,
-  transfer: (creep: Creep) => void,
-  // storeNewHarvestTarget: (creep:Creep) => void,
-  // dropEnergy: (creep:Creep) => void,
-  memorizedPrevTargets: (creep: Creep) => void,
-  cleanUpTargetsState: (creep: Creep) => void,
-  // getARandomTarget: (sources: Source[]) => Resource | undefined,
-  getClosestTarget: (creep: Creep, targets: any[]) => Resource | undefined,
-  shouldResetPrevTargets: (creep: Creep, targets: any[]) => void,
-  getNextClosestTarget: (creep: Creep, targets: any[]) => Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined,
-  getAppropiateResourceTarget: (creep: Creep, targets: any[]) => Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined,
-  stateSetter: (creep: Creep) => void,
-};
 function cleanUpTargetsState(creep: Creep) {
   // this.memorizedPrevTargets(creep);
   creep.memory.prevResourceTarget = creep.memory.resourceTarget;
@@ -46,11 +29,13 @@ function withdrowRemains(creep: Creep, target: any) {
     debugLog.warn(creep.name + "  Rsc error", withdrowAction);
     cleanUpTargetsState(creep);
   }
-};
-const haulerHandler: RoleHauler = {
+}
+
+export class RoleHauler {
+  private spawn?: StructureSpawn;
+
   /** @param {Creep} creep **/
-  spawn: undefined,
-  run: function (creep) {
+  public run(creep: Creep): void {
     this.stateSetter(creep);
     // creep.say(creep.name);
     let spawnName = Object.keys(Game.spawns)[0];
@@ -61,8 +46,9 @@ const haulerHandler: RoleHauler = {
     } else if (creep.memory.transfering) {
       this.transfer(creep);
     }
-  },
-  hauler: function (creep) {
+  }
+
+  public hauler(creep: Creep): void {
     let combineSources: (Tombstone | Ruin | Resource)[] = [];
 
     let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
@@ -127,33 +113,38 @@ const haulerHandler: RoleHauler = {
       this.cleanUpTargetsState(creep);
 
     }
-  },
-  memorizedPrevTargets(creep) {
+  }
+
+  public memorizedPrevTargets(creep: Creep): void {
     if (!creep.memory?.prevResourceTargets) {
       creep.memory.prevResourceTargets = []
     }
     if (creep.memory.resourceTarget) {
       creep.memory.prevResourceTargets.push(creep.memory.resourceTarget);
     }
-  },
-  cleanUpTargetsState(creep) {
+  }
+
+  public cleanUpTargetsState(creep: Creep): void {
     // this.memorizedPrevTargets(creep);
     creep.memory.prevResourceTarget = creep.memory.resourceTarget;
     creep.memory.resourceTarget = undefined;
-  },
-  getClosestTarget(creep, targets) {
+  }
+
+  public getClosestTarget(creep: Creep, targets: any[]): Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined {
     let nextClosestTaret = creep.pos.findClosestByRange(targets)
     return nextClosestTaret
-  },
-  shouldResetPrevTargets(creep, targets) {
+  }
+
+  public shouldResetPrevTargets(creep: Creep, targets: any[]): void {
     if (!creep?.memory?.prevResourceTargets) {
       this.memorizedPrevTargets(creep);
     }
     if (creep.memory.prevResourceTargets && creep.memory.prevResourceTargets.length === targets.length) {
       creep.memory.prevResourceTargets = [];
     }
-  },
-  getNextClosestTarget(creep, targets) {
+  }
+
+  public getNextClosestTarget(creep: Creep, targets: any[]): Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined {
     // this.shouldResetPrevTargets(creep, targets);
     let availableTargets;
 
@@ -166,16 +157,18 @@ const haulerHandler: RoleHauler = {
     // let availableTargets = _.filter(targets, (source) => !creep.memory.prevTargets.includes(source.id));
     // let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
     return nextClosestTaret;
-  },
-  getAppropiateResourceTarget(creep, sources) {
+  }
+
+  public getAppropiateResourceTarget(creep: Creep, sources: any[]): Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined {
     try {
       return this.getNextClosestTarget(creep, sources)
     } catch (error) {
       debugLog.error("error with " + creep.name, error);
       return undefined;
     }
-  },
-  transfer(creep) {
+  }
+
+  public transfer(creep: Creep): void {
     let targets = undefined;
     if (!this.spawn) return;
     _.sortByOrder
@@ -232,8 +225,9 @@ const haulerHandler: RoleHauler = {
       this.cleanUpTargetsState(creep);
       creep.say(`Can't transfer`)
     }
-  },
-  stateSetter: function (creep) {
+  }
+
+  public stateSetter(creep: Creep): void {
     //state handler
     if (creep.store.getFreeCapacity() > 0 && !creep.memory.transfering) {
       creep.memory.haulering = true;
@@ -252,6 +246,5 @@ const haulerHandler: RoleHauler = {
     } /*else {
       console.log("didn't fit")
     }*/
-  },
+  }
 }
-export default haulerHandler;

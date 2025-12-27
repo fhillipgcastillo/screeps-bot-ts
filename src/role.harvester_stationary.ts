@@ -1,24 +1,8 @@
 // import * as _ from "lodash";
 
-type RoleHarvester = {
-    run: (creep: Creep) => void,
-    getCreepTarget: (creep: Creep) => Source | undefined,
-    harvest: (creep: Creep) => void,
-    storeNewHarvestTarget: (creep: Creep) => void,
-    dropEnergy: (creep: Creep) => void,
-    memorizedPrevTargets: (creep: Creep) => void,
-    cleanUpTargetsState: (creep: Creep) => void,
-    getARandomTarget: (sources: Source[]) => Source | undefined,
-    getClosestTarget: (creep: Creep, targets: any[]) => any,
-    shouldResetPrevTargets: (creep: Creep, targets: any[]) => any,
-    getNextClosestTarget: (creep: Creep, targets: any[]) => any,
-    stateSetter: (creep: Creep) => void,
-    newLogicSourceTarget: (creep: Creep) => Source | null,
-};
-const roleHarvester: RoleHarvester = {
-
+export class RoleHarvester {
     /** @param {Creep} creep **/
-    run: function (creep) {
+    public run(creep: Creep): void {
         // creep.say(creep.name);
         this.stateSetter(creep);
         if (creep.store[RESOURCE_ENERGY] > 5) {
@@ -27,13 +11,14 @@ const roleHarvester: RoleHarvester = {
         } else {
             this.harvest(creep);
         }
-    },
-    getCreepTarget: function (creep) {
+    }
+
+    public getCreepTarget(creep: Creep): Source | undefined {
         var sources = creep.room.find(FIND_SOURCES);
         return _.find(sources, (source) => _.isEqual(source.id, creep.memory.sourceTarget));
-    },
-    newLogicSourceTarget: function (creep) {
+    }
 
+    public newLogicSourceTarget(creep: Creep): Source | null {
         var sources = creep.room.find(FIND_SOURCES);
         if (sources.length === 0) return null;
 
@@ -59,8 +44,9 @@ const roleHarvester: RoleHarvester = {
         }
 
         return target;
-    },
-    harvest: function (creep) {
+    }
+
+    public harvest(creep: Creep): void {
         try {
             let sourceTarget = this.newLogicSourceTarget(creep);
 
@@ -94,8 +80,9 @@ const roleHarvester: RoleHarvester = {
         } catch (error) {
             console.log("harvest error", error)
         }
-    },
-    storeNewHarvestTarget(creep) {
+    }
+
+    public storeNewHarvestTarget(creep: Creep): void {
         this.cleanUpTargetsState(creep);
         var targets = creep.room.find(FIND_SOURCES);
         var nextClosestTaret = this.getNextClosestTarget(creep, targets)
@@ -105,42 +92,50 @@ const roleHarvester: RoleHarvester = {
         // if (creep.harvest(nextClosestTaret) == ERR_NOT_IN_RANGE) {
         //     creep.moveTo(nextClosestTaret, { visualizePathStyle: { stroke: '#ffaa00' } });
         // }
-    },
-    dropEnergy(creep) {
+    }
+
+    public dropEnergy(creep: Creep): void {
         creep.drop(RESOURCE_ENERGY, 5)
-    },
-    memorizedPrevTargets(creep) {
+    }
+
+    public memorizedPrevTargets(creep: Creep): void {
         if (!creep.memory?.prevTargets) {
             creep.memory.prevTargets = []
         }
         if (creep.memory.sourceTarget) {
             creep.memory.prevTargets.push(creep.memory.sourceTarget);
         }
-    },
-    cleanUpTargetsState(creep) {
+    }
+
+    public cleanUpTargetsState(creep: Creep): void {
         // this.memorizedPrevTargets(creep);
         creep.memory.prevSourceTarget = creep.memory.sourceTarget;
         creep.memory.sourceTarget = undefined;
-    },
-    getARandomTarget(sources) {
+    }
+
+    public getARandomTarget(sources: Source[]): Source | undefined {
         const creepSourceTarget = _.sample(sources);
         return creepSourceTarget;
-    },
-    getClosestTarget(creep, targets) {
+    }
+
+    public getClosestTarget(creep: Creep, targets: any[]): any {
         var nextClosestTaret = creep.pos.findClosestByRange(targets)
         return nextClosestTaret;
-    },
-    shouldResetPrevTargets(creep, targets) {
+    }
+
+    public shouldResetPrevTargets(creep: Creep, targets: any[]): void {
         if (creep.memory?.prevTargets && creep.memory?.prevTargets.length === targets.length) {
             creep.memory.prevTargets = [];
         }
-    },
-    getNextClosestTarget(creep, targets) {
+    }
+
+    public getNextClosestTarget(creep: Creep, targets: any[]): any {
         let availableTargets = _.filter(targets, (source) => source.id !== creep.memory.sourceTarget);
         let nextClosestTaret = this.getClosestTarget(creep, availableTargets)
         return nextClosestTaret
-    },
-    stateSetter: function (creep) {
+    }
+
+    public stateSetter(creep: Creep): void {
         //state handler
         if (creep.store.getFreeCapacity() > 0 && !creep.memory.transfering) {
             creep.memory.harvesting = true;
@@ -150,7 +145,5 @@ const roleHarvester: RoleHarvester = {
             creep.memory.transfering = false;
             creep.memory.harvesting = true;
         }
-    },
-};
-
-export default roleHarvester;
+    }
+}

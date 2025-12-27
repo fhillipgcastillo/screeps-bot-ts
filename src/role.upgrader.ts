@@ -2,30 +2,18 @@
 import { findClosestContainer, getContainers } from "./utils";
 // import roleHauler from "./role.hauler";
 
-type RoleHauler = {
-    run: (creep: Creep) => void,
-    pickUpEnergy: (creep: Creep) => void,
-    stateSetter: (creep: Creep) => void,
-    stateHandler: (creep: Creep) => void,
-    memorizedPrevTargets?: (creep: Creep) => void,
-    cleanUpTargetsState?: (creep: Creep) => void,
-    getClosestTarget?: (creep: Creep, targets: any[]) => any,
-    shouldResetPrevTargets?: (creep: Creep, targets: any[]) => void,
-    getNextClosestTarget?: (creep: Creep, targets: any[]) => any,
-    getAppropiateResourceTarget?: (creep: Creep, targets: any[]) => any,
-};
-
-const roleUpgrader: RoleHauler = {
+export class RoleUpgrader {
     /** @param {Creep} creep **/
-    run: function (creep) {
+    public run(creep: Creep): void {
         try {
             this.stateSetter(creep);
             this.stateHandler(creep);
         } catch (error) {
             console.log(`${creep.name} upgrader error:`, error);
         }
-    },
-    stateSetter: function (creep) {
+    }
+
+    public stateSetter(creep: Creep): void {
         if (creep.store.getFreeCapacity() > 0 && !creep.memory.upgrading) {
             creep.memory.harvesting = true;
             creep.memory.upgrading = false;
@@ -36,8 +24,9 @@ const roleUpgrader: RoleHauler = {
             creep.memory.upgrading = false;
             creep.memory.harvesting = true;
         }
-    },
-    stateHandler: function (creep) {
+    }
+
+    public stateHandler(creep: Creep): void {
         if (creep.memory.harvesting) {
             this.pickUpEnergy(creep);
         } else if (creep.memory.upgrading) {
@@ -48,8 +37,9 @@ const roleUpgrader: RoleHauler = {
                 }
             }
         }
-    },
-    pickUpEnergy(creep) {
+    }
+
+    public pickUpEnergy(creep: Creep): void {
         let energySource = undefined;
 
         // Find containers with energy
@@ -123,7 +113,5 @@ const roleUpgrader: RoleHauler = {
         //         }
         //     }
         // }
-    },
-};
-
-export default roleUpgrader;
+    }
+}

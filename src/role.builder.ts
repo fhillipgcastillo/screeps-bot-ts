@@ -2,31 +2,9 @@
 import { findClosestContainer, getContainers } from "./utils";
 import { debugLog } from "./utils/Logger";
 
-type RoleBuilder = {
-    run: (creep: Creep) => void,
-    // getCreepTarget: (creep:Creep) => Source | undefined,
-    // hauler: (creep: Creep) => void,
-    // transfer: (creep: Creep) => void,
-    // storeNewHarvestTarget: (creep:Creep) => void,
-    // dropEnergy: (creep:Creep) => void,
-    memorizedPrevTargets: (creep: Creep) => void,
-    cleanUpTargetsState: (creep: Creep) => void,
-    // getARandomTarget: (sources: Source[]) => Resource | undefined,
-    getClosestTarget: (creep: Creep, targets: any[]) => Resource | undefined,
-    shouldResetPrevTargets: (creep: Creep, targets: any[]) => void,
-    getNextClosestTarget: (creep: Creep, targets: any[]) => Resource | undefined,
-    getAppropiateResourceTarget: (creep: Creep, targets: any[]) => Resource | undefined,
-    stateSetter: (creep: Creep) => void,
-    stateHandler: (creep: Creep) => void,
-    getBuildTarget: (creep: Creep) => ConstructionSite | null,
-    build: (creep: Creep) => void,
-    pickUpEnergy: (creep: Creep) => void,
-    findTarget: (creep: Creep) => ConstructionSite | null,
-};
-
-const roleBuilder: RoleBuilder = {
+export class RoleBuilder {
     /** @param {Creep} creep **/
-    run: function (creep) {
+    public run(creep: Creep): void {
         // when there's not harvester or haulers do not build
         // creep.say(creep.name);
         try {
@@ -35,8 +13,9 @@ const roleBuilder: RoleBuilder = {
         } catch (error) {
             debugLog.error(creep.name + " bldr error - ", error)
         }
-    },
-    stateSetter: function (creep) {
+    }
+
+    public stateSetter(creep: Creep): void {
         //state handler
         if (creep.store.getFreeCapacity() > 0 && !creep.memory.building) {
             creep.memory.harvesting = true;
@@ -51,8 +30,9 @@ const roleBuilder: RoleBuilder = {
             creep.memory.harvesting = true;
             // creep.memory.idle = false;
         }
-    },
-    stateHandler: function (creep) {
+    }
+
+    public stateHandler(creep: Creep): void {
         // var sources = creep.room.find(FIND_SOURCES);
         // sources.sort((a, b) => a.pos.findInRange(FIND_MY_CREEPS, 1).length - b.pos.findInRange(FIND_MY_CREEPS, 1).length);
         var containers = getContainers(creep, 50)
@@ -69,8 +49,9 @@ const roleBuilder: RoleBuilder = {
             // var targets = creep.rom.find(FIND_MY_CONSTRUCTION_SITES, {});
             this.build(creep)
         }
-    },
-    getBuildTarget(creep) {
+    }
+
+    public getBuildTarget(creep: Creep): ConstructionSite | null {
         let target: ConstructionSite | null;
         creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
         creep.memory.buildTarget = undefined;
@@ -107,8 +88,9 @@ const roleBuilder: RoleBuilder = {
 
         creep.memory.buildTarget = target?.id;
         return target;
-    },
-    findTarget(creep) {
+    }
+
+    public findTarget(creep: Creep): ConstructionSite | null {
         const target = creep.pos.findClosestByPath(FIND_MY_CONSTRUCTION_SITES, {
             filter: (structure) => {
                 // console.log(structure);
@@ -119,8 +101,9 @@ const roleBuilder: RoleBuilder = {
             }
         });
         return target;
-    },
-    build(creep) {
+    }
+
+    public build(creep: Creep): void {
         var target = null;
         if (!creep.memory.buildTarget || !Object.keys(Game.constructionSites).includes(creep.memory.buildTarget)) {
             target = this.getBuildTarget(creep);
@@ -143,8 +126,9 @@ const roleBuilder: RoleBuilder = {
             creep.memory.prevBuildTarget = creep.memory.buildTarget || undefined;
             creep.memory.buildTarget = undefined;
         }
-    },
-    pickUpEnergy(creep) {
+    }
+
+    public pickUpEnergy(creep: Creep): void {
         var containers = creep.room.find(FIND_STRUCTURES, {
             filter: (s) =>
                 s.structureType === STRUCTURE_CONTAINER
@@ -202,46 +186,50 @@ const roleBuilder: RoleBuilder = {
         //         }
         //     }
         // }
-    },
-    memorizedPrevTargets(creep) {
+    }
+
+    public memorizedPrevTargets(creep: Creep): void {
         if (!creep.memory?.prevTargets) {
             creep.memory.prevTargets = []
         }
         if (creep.memory.sourceTarget) {
             creep.memory.prevTargets.push(creep.memory.sourceTarget);
         }
-    },
-    cleanUpTargetsState(creep) {
+    }
+
+    public cleanUpTargetsState(creep: Creep): void {
         this.memorizedPrevTargets(creep);
         creep.memory.prevSourceTarget = creep.memory.sourceTarget;
         creep.memory.sourceTarget = undefined;
-    },
-    getClosestTarget(creep, targets) {
+    }
+
+    public getClosestTarget(creep: Creep, targets: any[]): Resource | undefined {
         var nextClosestTaret = creep.pos.findClosestByRange(targets)
         return nextClosestTaret
-    },
-    shouldResetPrevTargets(creep, targets) {
+    }
+
+    public shouldResetPrevTargets(creep: Creep, targets: any[]): void {
         if (!creep?.memory?.prevTargets) {
             this.memorizedPrevTargets(creep);
         }
         if (creep.memory.prevBuildTargets.length === targets.length) {
             creep.memory.prevBuildTargets = [];
         }
-    },
-    getNextClosestTarget(creep, targets) {
+    }
+
+    public getNextClosestTarget(creep: Creep, targets: any[]): Resource | undefined {
         this.shouldResetPrevTargets(creep, targets);
         var availableTargets = _.filter(targets, (source) => !creep.memory.prevBuildTargets.includes(source.id));
         var nextClosestTaret = this.getClosestTarget(creep, availableTargets)
         return nextClosestTaret
-    },
-    getAppropiateResourceTarget(creep, sources) {
+    }
+
+    public getAppropiateResourceTarget(creep: Creep, sources: any[]): Resource | undefined {
         try {
             return this.getNextClosestTarget(creep, sources)
         } catch (error) {
             debugLog.error("error with " + creep.name, error)
             return undefined;
         }
-    },
-} as RoleBuilder;
-
-export default roleBuilder;
+    }
+}
