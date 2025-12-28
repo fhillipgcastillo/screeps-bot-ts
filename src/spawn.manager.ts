@@ -138,6 +138,41 @@ export class SpawnManager {
    * Main spawning logic dispatcher
    */
   private handleSpawning(context: SpawnContext): void {
+    // Critical minimum creeps spawning - ignores controller level
+    // Ensures at least 2 harvesters and 2 haulers in specific order
+    const { spawn, creepCounts, availableEnergy } = context;
+
+    if (creepCounts.harvesters < 2 || creepCounts.haulers < 2) {
+      // First harvester
+      if (creepCounts.harvesters < 1) {
+        if (availableEnergy >= 200) {
+          this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
+          return;
+        }
+      }
+      // First hauler
+      else if (creepCounts.haulers < 1) {
+        if (availableEnergy >= 150) {
+          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
+          return;
+        }
+      }
+      // Second hauler
+      else if (creepCounts.haulers < 2) {
+        if (availableEnergy >= 150) {
+          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
+          return;
+        }
+      }
+      // Second harvester
+      else if (creepCounts.harvesters < 2) {
+        if (availableEnergy >= 200) {
+          this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
+          return;
+        }
+      }
+    }
+
     // Handle initial room controller level or emergency situations
     if (this.shouldHandleInitialSpawning(context)) {
       this.handleInitialSpawning(context);
