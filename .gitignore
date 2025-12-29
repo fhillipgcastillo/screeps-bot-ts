@@ -92,3 +92,4 @@ $RECYCLE.BIN/
 *.lnk
 
 dist/
+.env

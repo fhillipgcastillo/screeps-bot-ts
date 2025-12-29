@@ -7,6 +7,12 @@ import { GameManager } from "GameManager";
 const gm =  new GameManager()
 export const loop = () => {
   gm.tick();
+
+  // Generate a pixel when CPU bucket is maxed out
+  // This will convert your excess CPU to a resource called pixels. You can use pixels to unlock cosmetics. Alternatively, you can stockpile them and sell them later on.
+  if (Game.cpu.generatePixel && Game.cpu.bucket >= 10000) {
+    Game.cpu.generatePixel();
+  }
 };
 
 

@@ -12,7 +12,7 @@ export class Logger {
   private static instance: Logger;
   private config: LoggerConfig;
 
-  private constructor(config: LoggerConfig = { debug: false }) {
+  public constructor(config: LoggerConfig = { debug: false }) {
     this.config = config;
   }
 
@@ -55,11 +55,11 @@ export class Logger {
     const timestamp = `[${Game.time}]`;
     const prefix = this.config.prefix ? `[${this.config.prefix}]` : '';
     const levelTag = `[${level.toUpperCase()}]`;
-    
-    const formattedArgs = args.length > 0 ? ' ' + args.map(arg => 
+
+    const formattedArgs = args.length > 0 ? ' ' + args.map(arg =>
       typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
     ).join(' ') : '';
-    
+
     return `${timestamp}${prefix}${levelTag} ${message}${formattedArgs}`;
   }
 
@@ -117,7 +117,8 @@ export class Logger {
 /**
  * Create and export a default logger instance
  */
-export const logger = Logger.getInstance();
+// export const logger = Logger.getInstance();
+export const logger = new Logger();
 
 /**
  * Convenience functions for global access

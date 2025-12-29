@@ -98,8 +98,8 @@ export class SpawnManager {
   private createSpawnContext(spawn: StructureSpawn, creepCounts: CreepCounts): SpawnContext {
     const currentLevel = spawn.room?.controller?.level ?? 1;
     const levelHandler = this.getLevelHandler(currentLevel);
-    const availableEnergy = spawn.room.energyAvailable;
-    const energyCapacity = spawn.room.energyCapacityAvailable;
+    const availableEnergy = spawn.room.energyAvailable; // room's current available energy
+    const energyCapacity = spawn.room.energyCapacityAvailable; // room's maximum energy capacity
     const enoughCreeps = this.hasEnoughCreeps(creepCounts, levelHandler);
     const enemiesInRoom = spawn.room.find(FIND_HOSTILE_CREEPS);
 
@@ -152,14 +152,14 @@ export class SpawnManager {
    */
   public logDebugInfo(context: SpawnContext): void {
     if (Game.time % SpawnManager.DEBUG_INTERVAL === 0) {
-      debugLog.debug(`Room Energy ${context.availableEnergy}/${context.energyCapacity}`);
-      debugLog.debug(`Enough creeps: ${context.enoughCreeps}`);
-      debugLog.debug(`Harvesters: ${context.creepCounts.harvesters}`);
-      debugLog.debug(`Haulers: ${context.creepCounts.haulers}`);
-      debugLog.debug(`Builders: ${context.creepCounts.builders}`);
-      debugLog.debug(`Upgraders: ${context.creepCounts.upgraders}`);
-      debugLog.debug(`Defenders: ${context.creepCounts.defenders}`);
-      debugLog.debug(`Rangers: ${context.creepCounts.rangers}`);
+      debugLog.info(`Room Energy ${context.availableEnergy}/${context.energyCapacity}`);
+      debugLog.info(`Enough creeps: ${context.enoughCreeps}`);
+      debugLog.info(`Harvesters: ${context.creepCounts.harvesters}`);
+      debugLog.info(`Haulers: ${context.creepCounts.haulers}`);
+      debugLog.info(`Builders: ${context.creepCounts.builders}`);
+      debugLog.info(`Upgraders: ${context.creepCounts.upgraders}`);
+      debugLog.info(`Defenders: ${context.creepCounts.defenders}`);
+      debugLog.info(`Rangers: ${context.creepCounts.rangers}`);
     }
   }
 
@@ -167,6 +167,11 @@ export class SpawnManager {
    * Main spawning logic dispatcher
    */
   private handleSpawning(context: SpawnContext): void {
+    // Check if spawn is already spawning before attempting any spawn operations
+    if (context.spawn.spawning) {
+      return;
+    }
+
     // Priority 1: Handle replacement requests first
     if (this.replacementRequests.length > 0) {
       const handled = this.handleReplacementSpawning(context.spawn);
