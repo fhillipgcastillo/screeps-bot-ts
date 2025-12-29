@@ -47,27 +47,29 @@ export class RoleUpgrader {
         const containers = creep.room.find(FIND_STRUCTURES, {
             filter: (s) =>
                 s.structureType === STRUCTURE_CONTAINER
-                && s.store[RESOURCE_ENERGY] > 300
         });
 
-        // Find extensions with energy
-        const extensions = creep.room.find(FIND_MY_STRUCTURES, {
-            filter: (s) =>
-                s.structureType === STRUCTURE_EXTENSION
-                && s.store[RESOURCE_ENERGY] > 0
-        });
-
-        // Find spawn
-        const spawn = Game.spawns.Spawn1;
-
-        // Prioritize energy sources
+        // If containers exist, ONLY use containers
         if (containers.length > 0) {
             energySource = creep.pos.findClosestByRange(containers);
-        } else if (extensions.length > 0) {
-            energySource = creep.pos.findClosestByRange(extensions);
-        } else if (spawn && spawn.store.getUsedCapacity(RESOURCE_ENERGY) > 100) {
-            // Only use spawn if it has more than 100 energy
-            energySource = spawn;
+        } else {
+            // Only when NO containers exist, use extensions or spawn
+            // Find extensions with energy
+            const extensions = creep.room.find(FIND_MY_STRUCTURES, {
+                filter: (s) =>
+                    s.structureType === STRUCTURE_EXTENSION
+                    && s.store[RESOURCE_ENERGY] > 0
+            });
+
+            // Find spawn
+            const spawn = Game.spawns.Spawn1;
+
+            if (extensions.length > 0) {
+                energySource = creep.pos.findClosestByRange(extensions);
+            } else if (spawn && spawn.store.getUsedCapacity(RESOURCE_ENERGY) > 100) {
+                // Only use spawn if it has more than 100 energy
+                energySource = spawn;
+            }
         }
 
         // If we found an energy source, try to withdraw from it

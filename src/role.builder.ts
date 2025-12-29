@@ -130,30 +130,36 @@ export class RoleBuilder {
 
     public pickUpEnergy(creep: Creep): void {
         var containers = creep.room.find(FIND_STRUCTURES, {
-            filter: (s) =>
-                s.structureType === STRUCTURE_CONTAINER
-                && s.store[RESOURCE_ENERGY] > 300
+            filter: (s) => s.structureType === STRUCTURE_CONTAINER
             // && s.store.getFreeCapacity(RESOURCE_ENERGY) > 100
         });
 
-        const extensions = creep.room.find(FIND_MY_STRUCTURES, { filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0 })
-        let container = containers ? creep.pos.findClosestByRange(containers) : null;
-        if (extensions.length > 0) {
-            let theExtension = creep.pos.findClosestByRange(extensions);
+        // If containers exist, ONLY use containers
+        if (containers.length > 0) {
+            let container = creep.pos.findClosestByRange(containers);
+            if (container) {
+                const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
+                if (withdrawAction === ERR_NOT_IN_RANGE) {
+                    creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
+            }
+        } else {
+            // Only when NO containers exist, use extensions or spawn
+            const extensions = creep.room.find(FIND_MY_STRUCTURES, {
+                filter: (s) => s.structureType === STRUCTURE_EXTENSION && s.store[RESOURCE_ENERGY] > 0
+            });
 
-            if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-        }
-        else if (container) {
-            const withdrawAction = creep.withdraw(container, RESOURCE_ENERGY);
-            if (withdrawAction === ERR_NOT_IN_RANGE) {
-                creep.moveTo(container, { visualizePathStyle: { stroke: '#ffaa00' } });
-            }
-        } else if (!container || !extensions) {
-            let spawn = Game.spawns.Spawn1;
-            if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
-                creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
+            if (extensions.length > 0) {
+                let theExtension = creep.pos.findClosestByRange(extensions);
+
+                if (theExtension && creep.withdraw(theExtension, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(theExtension, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
+            } else {
+                let spawn = Game.spawns.Spawn1;
+                if (creep.withdraw(spawn, RESOURCE_ENERGY) == ERR_NOT_IN_RANGE) {
+                    creep.moveTo(spawn, { visualizePathStyle: { stroke: '#ffaa00' } });
+                }
             }
         }
 
