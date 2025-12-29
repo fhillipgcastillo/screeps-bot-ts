@@ -1,5 +1,5 @@
 import { GameStatsUI, getGameStatsUI, UIDisplayOptions } from "./GameStatsUI";
-import { debugLog } from "../utils/Logger";
+import { debugLog } from "../utils/logger";
 
 // Re-export the main UI class and types
 export { GameStatsUI, getGameStatsUI, UIDisplayOptions };

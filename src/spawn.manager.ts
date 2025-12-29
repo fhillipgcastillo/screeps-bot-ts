@@ -1,6 +1,6 @@
 import { levelDefinitions, LevelDefinition } from "./levels.handler";
 import { CreepRole, CreepRoleEnum, getCreepsByRole } from "./types";
-import { debugLog } from "./utils/Logger";
+import { debugLog } from "./utils/logger";
 
 /**
  * Interface defining the structure for creep counts by role

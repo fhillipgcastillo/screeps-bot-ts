@@ -1,5 +1,7 @@
 // import * as _ from "lodash";
 
+import { debugLog } from "utils/logger";
+
 export class RoleHarvester {
     /** @param {Creep} creep **/
     public run(creep: Creep): void {
@@ -39,7 +41,7 @@ export class RoleHarvester {
         if (!target && creep.memory.sourceTarget) {
             target = sources.find(s => s.id === creep.memory.sourceTarget) || null;
             if (!target) {
-                console.log("not target available");
+                debugLog.warn("not target available");
             }
         }
 
@@ -58,7 +60,7 @@ export class RoleHarvester {
                     // creep.say("Moving...");
                     let movingError = creep.moveTo(sourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
                     if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
-                        console.log("Hvst mv2 ERR_NO_PATH", movingError); //most commont error when there's a lot of creeps
+                        debugLog.warn("Hvst mv2 ERR_NO_PATH", movingError); //most commont error when there's a lot of creeps
                         creep.say("NO Pth")
                         this.cleanUpTargetsState(creep);
                         let targets = creep.room.find(FIND_SOURCES);
@@ -67,18 +69,18 @@ export class RoleHarvester {
 
                     }
                 } else if (harvestAction === ERR_INVALID_TARGET) {
-                    console.log("Hvst ERR_INVALID_TARGET");
+                    debugLog.warn("Hvst ERR_INVALID_TARGET");
                     creep.say("INV Tgt")
                     this.cleanUpTargetsState(creep);
                 } else if (harvestAction !== OK) {
-                    console.log(`${creep.name} Hvst Another error`, harvestAction);
+                    debugLog.warn(`${creep.name} Hvst Another error`, harvestAction);
                     this.cleanUpTargetsState(creep);
                 }
             } else {
                 this.cleanUpTargetsState(creep);
             }
         } catch (error) {
-            console.log("harvest error", error)
+            debugLog.error("harvest error", error)
         }
     }
 

@@ -1,6 +1,6 @@
 // import * as _ from "lodash";
 import { findClosestContainer, getContainers } from "./utils";
-import { debugLog } from "./utils/Logger";
+import { debugLog } from "./utils/logger";
 
 export class RoleBuilder {
     /** @param {Creep} creep **/

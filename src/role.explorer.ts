@@ -1,4 +1,4 @@
-import { debugLog } from "./utils/Logger";
+import { debugLog } from "./utils/logger";
 
 function getExitRoomNames(fromRoom: string) {
   return Game.map.describeExits(fromRoom);

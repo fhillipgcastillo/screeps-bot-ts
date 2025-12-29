@@ -1,4 +1,5 @@
 import { GameManager } from "GameManager";
+import { debugLog } from "./utils/logger";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
@@ -90,6 +91,8 @@ global.enableDebug = () => gm.enableDebug();
 global.disableDebug = () => gm.disableDebug();
 global.toggleDebug = () => gm.toggleDebug();
 global.isDebugEnabled = () => gm.isDebugEnabled();
+global.setDebugLevels = (levels: string | string[]) => debugLog.setLogLevels(levels);
+global.getDebugLevels = () => debugLog.getEnabledLevels();
 
 // Assign manual spawner functions to global for console access
 global.spawnCreep = spawnCreep;

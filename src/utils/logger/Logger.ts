@@ -20,7 +20,7 @@ export class Logger {
       ...config,
       enabledLevels: config.enabledLevels || ['info']
     };
-    console.log("Logger initialized with config:");
+    console.log("[LOGGER] Logger initialized with config:");
   }
 
   /**

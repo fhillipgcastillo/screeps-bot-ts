@@ -1,4 +1,4 @@
-import { debugLog } from "./utils/Logger";
+import { debugLog } from "./utils/logger";
 
 export class RoleDefender {
     public run(creep: Creep): void {

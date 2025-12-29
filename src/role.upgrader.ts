@@ -1,4 +1,5 @@
 // import * as _ from "lodash";
+import { debugLog } from "utils/logger";
 import { findClosestContainer, getContainers } from "./utils";
 // import roleHauler from "./role.hauler";
 
@@ -9,7 +10,7 @@ export class RoleUpgrader {
             this.stateSetter(creep);
             this.stateHandler(creep);
         } catch (error) {
-            console.log(`${creep.name} upgrader error:`, error);
+            debugLog.error(`${creep.name} upgrader error:`, error);
         }
     }
 
@@ -78,7 +79,7 @@ export class RoleUpgrader {
                     visualizePathStyle: { stroke: '#ffaa00' }
                 });
             } else if (withdrawResult !== OK) {
-                console.log(`${creep.name} withdraw error:`, withdrawResult);
+                debugLog.error(`${creep.name} withdraw error:`, withdrawResult);
             }
         } else {
             creep.say('No energy!');

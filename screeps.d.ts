@@ -102,6 +102,8 @@ declare global {
       disableDebug: () => void;
       toggleDebug: () => void;
       isDebugEnabled: () => boolean;
+      setDebugLevels: (levels: string | string[]) => void;
+      getDebugLevels: () => string[];
     }
   }
 }

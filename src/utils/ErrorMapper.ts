@@ -1,5 +1,5 @@
 import { SourceMapConsumer } from "source-map";
-import { debugLog } from "./Logger";
+import { debugLog } from "./logger";
 
 export class ErrorMapper {
   // Cache consumer

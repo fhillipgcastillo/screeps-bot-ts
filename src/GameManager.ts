@@ -9,7 +9,7 @@ import { RoleDefender } from "./role.defender";
 import { RoleRanger } from "./role.ranger";
 import { CreepRoleEnum, isValidCreepRole } from "./types";
 import { updateVisualOverlay } from "./ui";
-import { logger, debugLog } from "./utils/Logger";
+import { debugLog } from "./utils/logger";
 
 
 export class GameManager {
@@ -45,7 +45,7 @@ export class GameManager {
     this.roleRanger = new RoleRanger();
 
     // Initialize logger with debug state
-    logger.setDebug(this.debug);
+    debugLog.setDebug(this.debug);
   }
 
   /**
@@ -57,7 +57,7 @@ export class GameManager {
       return;
     }
 
-    logger.debug(`Current game tick is ${Game.time}`);
+    debugLog.debug(`Current game tick is ${Game.time}`);
     this.syncActiveCreeps();
 
     this.handleDyingCreeps();
@@ -113,7 +113,7 @@ export class GameManager {
   runCreep(creep: Creep, spawn: StructureSpawn): void {
     // Validate that the creep has a valid role
     if (!isValidCreepRole(creep.memory.role)) {
-      logger.error(`Invalid role: ${creep.memory.role} for creep ${creep.name}`);
+      debugLog.error(`Invalid role: ${creep.memory.role} for creep ${creep.name}`);
       return;
     }
 
@@ -141,7 +141,7 @@ export class GameManager {
         break;
       default:
         // This should never happen due to the type guard above, but keeping for safety
-        logger.error(`Unknown role: ${creep.memory.role}`);
+        debugLog.error(`Unknown role: ${creep.memory.role}`);
     }
   }
   /**
@@ -177,7 +177,7 @@ export class GameManager {
     for (var creepName in Memory.creeps) {
       if (!Game.creeps[creepName]) {
         delete Memory.creeps[creepName];
-        logger.debug('Clearing non-existing creep memory:', creepName);
+        debugLog.debug('Clearing non-existing creep memory:', creepName);
       }
     }
   }
@@ -202,7 +202,7 @@ export class GameManager {
    */
   public pauseGame(): void {
     this.isPaused = true;
-    logger.force("🛑 Game paused - bot operations stopped");
+    debugLog.force("🛑 Game paused - bot operations stopped");
   }
 
   /**
@@ -210,7 +210,7 @@ export class GameManager {
    */
   public resumeGame(): void {
     this.isPaused = false;
-    logger.force("▶️ Game resumed - bot operations continuing");
+    debugLog.force("▶️ Game resumed - bot operations continuing");
   }
 
   /**
@@ -219,9 +219,9 @@ export class GameManager {
   public togglePause(): void {
     this.isPaused = !this.isPaused;
     if (this.isPaused) {
-      logger.force("🛑 Game paused - bot operations stopped");
+      debugLog.force("🛑 Game paused - bot operations stopped");
     } else {
-      logger.force("▶️ Game resumed - bot operations continuing");
+      debugLog.force("▶️ Game resumed - bot operations continuing");
     }
   }
 
@@ -241,7 +241,7 @@ export class GameManager {
    */
   public enableDebug(): void {
     this.debug = true;
-    logger.setDebug(true);
+    debugLog.setDebug(true);
     console.log("🐛 Debug logging enabled - terminal output active");
   }
 
@@ -250,7 +250,7 @@ export class GameManager {
    */
   public disableDebug(): void {
     this.debug = false;
-    logger.setDebug(false);
+    debugLog.setDebug(false);
     console.log("🔇 Debug logging disabled - terminal output muted");
   }
 
@@ -259,7 +259,7 @@ export class GameManager {
    */
   public toggleDebug(): void {
     this.debug = !this.debug;
-    logger.setDebug(this.debug);
+    debugLog.setDebug(this.debug);
     if (this.debug) {
       console.log("🐛 Debug logging enabled - terminal output active");
     } else {
@@ -278,7 +278,7 @@ export class GameManager {
    * Get the logger instance for direct access
    */
   public getLogger() {
-    return logger;
+    return debugLog;
   }
 }
 

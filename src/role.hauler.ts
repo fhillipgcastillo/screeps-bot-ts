@@ -1,5 +1,5 @@
 // import * as _ from "lodash";
-import { debugLog } from "./utils/Logger";
+import { debugLog } from "./utils/logger";
 
 function cleanUpTargetsState(creep: Creep) {
   // this.memorizedPrevTargets(creep);
