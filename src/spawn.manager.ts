@@ -43,7 +43,7 @@ interface ReplacementRequest {
  */
 export class SpawnManager {
   private static readonly DEBUG_INTERVAL = 5;
-  private static readonly MINIMUM_HARVESTERS_THRESHOLD = 3;
+  private static readonly MINIMUM_HARVESTERS_THRESHOLD = 2;
   private static readonly MINIMUM_HAULERS_THRESHOLD = 4;
   private static readonly MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED = 2;
   private static readonly DYING_THRESHOLD = 30;
