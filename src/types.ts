@@ -83,6 +83,11 @@ export interface BaseCreepMemory {
     prevResourceTarget?: Id<Resource | Structure | Tombstone | Ruin>;
     prevResourceTargets?: Id<Resource | Structure | Tombstone | Ruin>[];
 
+    // Replacement tracking
+    replacementRequested?: boolean;
+    replacementSpawned?: boolean;
+    replacementName?: string;
+
     // Index signature for additional properties
     [name: string]: any;
 }

@@ -60,6 +60,7 @@ export class GameManager {
     logger.debug(`Current game tick is ${Game.time}`);
     this.syncActiveCreeps();
 
+    this.handleDyingCreeps();
     this.cleanUpMemory();
     // Game.map.visual.text("Target💥", new RoomPosition(10,16,Object.keys(Game.rooms)[0]), {color: '#FF0000', fontSize: 19});
 
@@ -143,6 +144,35 @@ export class GameManager {
         logger.error(`Unknown role: ${creep.memory.role}`);
     }
   }
+  /**
+   * Handles dying creeps - requests replacements and suicides after replacement spawns
+   */
+  handleDyingCreeps(): void {
+    for (const creepName in Game.creeps) {
+      const creep = Game.creeps[creepName];
+      if (!creep || creep.spawning) {
+        continue;
+      }
+
+      // Check if creep has less than 30 TTL and needs a replacement
+      if (creep.ticksToLive && creep.ticksToLive < 30) {
+        // Request replacement if not already requested
+        if (!creep.memory.replacementRequested) {
+          this.spawnManager.requestReplacement(creep);
+        }
+
+        // Suicide if replacement has spawned and is no longer spawning
+        if (creep.memory.replacementSpawned && creep.memory.replacementName) {
+          const replacement = Game.creeps[creep.memory.replacementName];
+          if (replacement && !replacement.spawning) {
+            debugLog.info(`${creep.name} suiciding - replacement ${creep.memory.replacementName} has spawned`);
+            creep.suicide();
+          }
+        }
+      }
+    }
+  }
+
   cleanUpMemory() {
     for (var creepName in Memory.creeps) {
       if (!Game.creeps[creepName]) {

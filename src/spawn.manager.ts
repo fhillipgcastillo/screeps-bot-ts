@@ -29,6 +29,15 @@ interface SpawnContext {
 }
 
 /**
+ * Interface for replacement spawn requests
+ */
+interface ReplacementRequest {
+  role: CreepRole;
+  dyingCreepName: string;
+  body: BodyPartConstant[];
+}
+
+/**
  * SpawnManager class responsible for managing creep spawning across all spawns
  * Implements object-oriented design principles with proper encapsulation and separation of concerns
  */
@@ -37,6 +46,26 @@ export class SpawnManager {
   private static readonly MINIMUM_HARVESTERS_THRESHOLD = 3;
   private static readonly MINIMUM_HAULERS_THRESHOLD = 4;
   private static readonly MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED = 2;
+  private static readonly DYING_THRESHOLD = 30;
+
+  // Track replacement requests
+  private replacementRequests: ReplacementRequest[] = [];
+
+  /**
+   * Request a replacement creep for a dying creep
+   */
+  public requestReplacement(creep: Creep): void {
+    if (!creep.memory.replacementRequested) {
+      const body = creep.body.map(part => part.type);
+      this.replacementRequests.push({
+        role: creep.memory.role,
+        dyingCreepName: creep.name,
+        body: body
+      });
+      creep.memory.replacementRequested = true;
+      debugLog.info(`Replacement requested for dying ${creep.memory.role}: ${creep.name}`);
+    }
+  }
 
   /**
    * Main entry point for spawn management - processes all spawns in the game
@@ -138,6 +167,14 @@ export class SpawnManager {
    * Main spawning logic dispatcher
    */
   private handleSpawning(context: SpawnContext): void {
+    // Priority 1: Handle replacement requests first
+    if (this.replacementRequests.length > 0) {
+      const handled = this.handleReplacementSpawning(context.spawn);
+      if (handled) {
+        return;
+      }
+    }
+
     // Critical minimum creeps spawning - ignores controller level
     // Ensures at least 2 harvesters and 2 haulers in specific order
     const { spawn, creepCounts, availableEnergy } = context;
@@ -481,6 +518,46 @@ export class SpawnManager {
       working: false
     } as CreepMemory;
     return spawn.spawnCreep(body, name, { memory });
+  }
+
+  /**
+   * Handles spawning of replacement creeps
+   */
+  private handleReplacementSpawning(spawn: StructureSpawn): boolean {
+    if (this.replacementRequests.length === 0) {
+      return false;
+    }
+
+    const request = this.replacementRequests[0];
+    const name = `${request.role.charAt(0).toUpperCase() + request.role.slice(1)}${Game.time}`;
+    const memory: CreepMemory = {
+      role: request.role,
+      room: spawn.room.name,
+      working: false
+    } as CreepMemory;
+
+    const result = spawn.spawnCreep(request.body, name, { memory });
+
+    if (result === OK) {
+      debugLog.info(`Spawning replacement ${request.role}: ${name} for ${request.dyingCreepName}`);
+      // Mark the dying creep that replacement has spawned
+      const dyingCreep = Game.creeps[request.dyingCreepName];
+      if (dyingCreep) {
+        dyingCreep.memory.replacementSpawned = true;
+        dyingCreep.memory.replacementName = name;
+      }
+      // Remove the request from the queue
+      this.replacementRequests.shift();
+      return true;
+    } else if (result === ERR_NOT_ENOUGH_ENERGY) {
+      // Wait for more energy, keep the request in queue
+      return false;
+    } else {
+      // Remove invalid requests
+      debugLog.error(`Failed to spawn replacement for ${request.dyingCreepName}: ${result}`);
+      this.replacementRequests.shift();
+      return false;
+    }
   }
 
   /**
