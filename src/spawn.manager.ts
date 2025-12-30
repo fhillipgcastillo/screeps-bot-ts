@@ -217,12 +217,13 @@ export class SpawnManager {
       }
     }
 
-    // Handle initial room controller level or emergency situations
-    if (this.shouldHandleInitialSpawning(context)) {
-      this.handleInitialSpawning(context);
+    // If all teams are not complete, don't proceed to builders/upgraders
+    if (!this.areAllTeamsComplete(spawn.room)) {
+      return;
     }
+
     // Handle advanced spawning for level 2+ rooms
-    else if (context.currentLevel >= SpawnManager.MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED) {
+    if (context.currentLevel >= SpawnManager.MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED) {
       if (context.enemiesInRoom.length > 0) {
         this.handleDefensiveSpawning(context);
       } else {
@@ -232,55 +233,33 @@ export class SpawnManager {
   }
 
   /**
-   * Determines if we should use initial spawning logic
+   * Checks if all source teams are complete (have all required members)
+   * Returns false if any team is missing harvesters or haulers
    */
-  private shouldHandleInitialSpawning(context: SpawnContext): boolean {
-    return context.currentLevel < SpawnManager.MINIMUM_CONTROLLER_LEVEL_FOR_ADVANCED
-      || context.creepCounts.harvesters < SpawnManager.MINIMUM_HARVESTERS_THRESHOLD
-      || context.creepCounts.haulers < SpawnManager.MINIMUM_HAULERS_THRESHOLD;
-  }
-  /**
-   * Handles initial spawning for early game or emergency situations
-   */
-  private handleInitialSpawning(context: SpawnContext): void {
-    const { spawn, levelHandler, creepCounts, availableEnergy, enoughCreeps } = context;
+  private areAllTeamsComplete(room: Room): boolean {
+    const sources = room.find(FIND_SOURCES);
+    if (sources.length === 0) return true;
 
-    // Handle emergency or low energy situations
-    if (availableEnergy < 300 || !enoughCreeps) {
-      this.spawnEmergencyCreeps(spawn, levelHandler, creepCounts);
-    } else if (enoughCreeps) {
-      this.spawnOptimalCreeps(spawn, levelHandler, creepCounts);
-    }
-  }
+    if (!Memory.sources) return false;
 
-  /**
-   * Spawns emergency creeps with minimal energy requirements
-   */
-  public spawnEmergencyCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
-    if (counts.harvesters < 1 || (counts.harvesters < levelHandler.harvesters.min && counts.haulers % 3 === 0)) {
-      this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
-    } else if (counts.haulers < levelHandler.haulers.min) {
-      this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
-    } else if (counts.builders < levelHandler.builders.min) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
-    } else if (counts.upgraders < levelHandler.upgraders.min) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
-    }
-  }
+    for (const source of sources) {
+      const sourceMemory = Memory.sources[source.id];
+      if (!sourceMemory || !sourceMemory.team) {
+        return false; // Team structure not yet initialized
+      }
 
-  /**
-   * Spawns optimal creeps when we have enough basic creeps
-   */
-  private spawnOptimalCreeps(spawn: StructureSpawn, levelHandler: LevelDefinition, counts: CreepCounts): void {
-    if (counts.harvesters < levelHandler.harvesters.max) {
-      this.spawnCreep(spawn, [WORK, WORK, MOVE, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
-    } else if (counts.haulers < levelHandler.haulers.max) {
-      this.spawnCreep(spawn, [CARRY, MOVE, MOVE, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
-    } else if (counts.builders < levelHandler.builders.max) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Builder', CreepRoleEnum.BUILDER);
-    } else if (counts.upgraders < levelHandler.upgraders.max) {
-      this.spawnCreep(spawn, [WORK, CARRY, MOVE, MOVE], 'Upgrader', CreepRoleEnum.UPGRADER);
+      const team = sourceMemory.team;
+      const harvestersReady = team.harvesters && team.harvesters.length === 2;
+      const haulersReady = team.haulers && team.haulers.length === 4;
+
+      // Check if team is missing members
+      if (!harvestersReady || !haulersReady) {
+        debugLog.debug(`Team at Source${source.id.slice(-4)} incomplete: ${team.harvesters?.length || 0}/2 H, ${team.haulers?.length || 0}/4 U`);
+        return false;
+      }
     }
+
+    return true;
   }
 
   /**

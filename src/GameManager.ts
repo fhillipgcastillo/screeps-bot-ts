@@ -166,6 +166,8 @@ export class GameManager {
           const replacement = Game.creeps[creep.memory.replacementName];
           if (replacement && !replacement.spawning) {
             debugLog.info(`${creep.name} suiciding - replacement ${creep.memory.replacementName} has spawned`);
+            // Clean up team information before dying
+            this.cleanUpCreepFromTeam(creep);
             creep.suicide();
           }
         }
@@ -173,11 +175,99 @@ export class GameManager {
     }
   }
 
+  /**
+   * Remove creep from its source team when it dies
+   */
+  private cleanUpCreepFromTeam(creep: Creep): void {
+    if (!creep.memory.sourceId || !Memory.sources) {
+      return;
+    }
+
+    const sourceId = creep.memory.sourceId as Id<Source>;
+    const sourceMemory = Memory.sources[sourceId];
+
+    if (!sourceMemory || !sourceMemory.team) {
+      return;
+    }
+
+    const team = sourceMemory.team;
+
+    // Remove from harvesters array
+    if (team.harvesters && Array.isArray(team.harvesters)) {
+      const harvesterIndex = team.harvesters.indexOf(creep.name);
+      if (harvesterIndex !== -1) {
+        team.harvesters.splice(harvesterIndex, 1);
+        debugLog.info(`Cleaned up ${creep.name} from harvesters team at Source${sourceId.slice(-4)}`);
+      }
+    }
+
+    // Remove from haulers array
+    if (team.haulers && Array.isArray(team.haulers)) {
+      const haulerIndex = team.haulers.indexOf(creep.name);
+      if (haulerIndex !== -1) {
+        team.haulers.splice(haulerIndex, 1);
+        debugLog.info(`Cleaned up ${creep.name} from haulers team at Source${sourceId.slice(-4)}`);
+      }
+    }
+
+    // Remove from queue if present
+    if (sourceMemory.queue && sourceMemory.queue.order && Array.isArray(sourceMemory.queue.order)) {
+      const queueIndex = sourceMemory.queue.order.indexOf(creep.name);
+      if (queueIndex !== -1) {
+        sourceMemory.queue.order.splice(queueIndex, 1);
+        debugLog.info(`Removed ${creep.name} from queue at Source${sourceId.slice(-4)}`);
+      }
+    }
+  }
+
   cleanUpMemory() {
     for (var creepName in Memory.creeps) {
       if (!Game.creeps[creepName]) {
+        // Creep is dead, clean it from team structures
+        this.cleanUpDeadCreepFromTeams(creepName);
         delete Memory.creeps[creepName];
         debugLog.debug('Clearing non-existing creep memory:', creepName);
+      }
+    }
+  }
+
+  /**
+   * Remove dead creep from all team structures in Memory.sources
+   */
+  private cleanUpDeadCreepFromTeams(deadCreepName: string): void {
+    if (!Memory.sources) return;
+
+    for (const sourceId in Memory.sources) {
+      const sourceMemory = Memory.sources[sourceId];
+      if (!sourceMemory || !sourceMemory.team) continue;
+
+      const team = sourceMemory.team;
+
+      // Remove from harvesters array
+      if (team.harvesters && Array.isArray(team.harvesters)) {
+        const harvesterIndex = team.harvesters.indexOf(deadCreepName);
+        if (harvesterIndex !== -1) {
+          team.harvesters.splice(harvesterIndex, 1);
+          debugLog.debug(`Cleaned up dead ${deadCreepName} from harvesters team at Source${sourceId.slice(-4)}`);
+        }
+      }
+
+      // Remove from haulers array
+      if (team.haulers && Array.isArray(team.haulers)) {
+        const haulerIndex = team.haulers.indexOf(deadCreepName);
+        if (haulerIndex !== -1) {
+          team.haulers.splice(haulerIndex, 1);
+          debugLog.debug(`Cleaned up dead ${deadCreepName} from haulers team at Source${sourceId.slice(-4)}`);
+        }
+      }
+
+      // Remove from queue if present
+      if (sourceMemory.queue && sourceMemory.queue.order && Array.isArray(sourceMemory.queue.order)) {
+        const queueIndex = sourceMemory.queue.order.indexOf(deadCreepName);
+        if (queueIndex !== -1) {
+          sourceMemory.queue.order.splice(queueIndex, 1);
+          debugLog.debug(`Removed dead ${deadCreepName} from queue at Source${sourceId.slice(-4)}`);
+        }
       }
     }
   }
