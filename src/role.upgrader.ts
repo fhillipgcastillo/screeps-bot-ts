@@ -83,9 +83,10 @@ export class RoleUpgrader {
             } else if (withdrawResult !== OK) {
                 debugLog.error(`${creep.name} withdraw error:`, withdrawResult);
             }
-        } else {
-            creep.say('No energy!');
         }
+        // else {
+        //     creep.say('No energy!');
+        // }
 
         // var droppedResources = creep.room.find(FIND_DROPPED_RESOURCES, {
         //     filter: resource => resource.resourceType === RESOURCE_ENERGY

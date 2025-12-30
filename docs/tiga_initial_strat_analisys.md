@@ -21,3 +21,5 @@ first haulers have only 1 carry (50 carrying capacity) and probably 1 move.
 
 my idea
 in the state setter of each creep we can create a main logger that when the screep changes states it tell us, that way a hauler to start moving saying mvoing toward x target, when it stops it change sit state (as spected to this strategy) for something like waiting fro enough energy
+
+how haulers how much need to wait will depend on its carrying capacity, where each carry body part is equivalent to 50 energy. with this, Tiga strategy uses haulers with only 1 carry on the initial round of haulers, at least.

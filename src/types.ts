@@ -324,3 +324,41 @@ export function getCreepCountsByRole(): Record<CreepRole, number> {
 export function getCreepsByRole<T extends CreepRole>(role: T): Creep[] {
     return _.filter(Game.creeps, (creep) => creep.memory.role === role);
 }
+// ============================================================================
+// GLOBAL MEMORY EXTENSIONS
+// ============================================================================
+
+/**
+ * Source team information for per-source team tracking
+ */
+interface SourceTeam {
+    harvesters: string[];
+    haulers: string[];
+    maxHaulers: number;
+}
+
+/**
+ * Source queue information for Tiga's hauler queue system
+ */
+interface SourceQueue {
+    order: string[]; // Queue order of creep names
+    accumulation: number; // Total dropped energy at source
+}
+
+/**
+ * Per-source memory structure
+ */
+interface SourceMemory {
+    team: SourceTeam;
+    queue: SourceQueue;
+}
+
+/**
+ * Extension of the global Memory object to include sources tracking
+ * This allows Memory.sources[sourceId] to store team and queue information
+ */
+declare global {
+    interface Memory {
+        sources?: Record<string, SourceMemory>;
+    }
+}

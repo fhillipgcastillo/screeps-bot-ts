@@ -15,10 +15,10 @@ export class Logger {
   private static instance: Logger;
   private config: LoggerConfig;
 
-  public constructor(config: LoggerConfig = { debug: false }) {
+  public constructor(config: LoggerConfig = { debug: true }) {
     this.config = {
       ...config,
-      enabledLevels: config.enabledLevels || ['info']
+      enabledLevels: config.enabledLevels || ['debug']
     };
     console.log("[LOGGER] Logger initialized with config:");
   }

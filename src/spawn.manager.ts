@@ -180,36 +180,36 @@ export class SpawnManager {
       }
     }
 
-    // Critical minimum creeps spawning - ignores controller level
-    // Ensures at least 2 harvesters and 2 haulers in specific order
+    // Tiga's spawn sequence: 1 Harvester → 1 Hauler → Double Both
+    // This sequence ensures optimal early game progression
     const { spawn, creepCounts, availableEnergy } = context;
 
     if (creepCounts.harvesters < 2 || creepCounts.haulers < 2) {
-      // First harvester
+      // Step 1: Spawn first harvester
       if (creepCounts.harvesters < 1) {
         if (availableEnergy >= 200) {
-          this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
+          this.spawnCreep(spawn, [WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
           return;
         }
       }
-      // First hauler
-      else if (creepCounts.haulers < 1) {
-        if (availableEnergy >= 150) {
-          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
-          return;
-        }
-      }
-      // Second hauler
-      else if (creepCounts.haulers < 2) {
-        if (availableEnergy >= 150) {
-          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
-          return;
-        }
-      }
-      // Second harvester
-      else if (creepCounts.harvesters < 2) {
+      // Step 2: Spawn second harvester (only if at least 1 harvester exists)
+      else if (creepCounts.harvesters === 1 && creepCounts.haulers < 1) {
         if (availableEnergy >= 200) {
           this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
+          return;
+        }
+      }
+      // Step 3: Spawn first hauler (after 2 harvesters)
+      else if (creepCounts.harvesters >= 2 && creepCounts.haulers < 1) {
+        if (availableEnergy >= 150) {
+          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
+          return;
+        }
+      }
+      // Step 4: Spawn second hauler (after 2 harvesters and 1 hauler)
+      else if (creepCounts.harvesters >= 2 && creepCounts.haulers === 1) {
+        if (availableEnergy >= 150) {
+          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
           return;
         }
       }
@@ -522,7 +522,76 @@ export class SpawnManager {
       room: spawn.room.name,
       working: false
     } as CreepMemory;
-    return spawn.spawnCreep(body, name, { memory });
+
+    const result = spawn.spawnCreep(body, name, { memory });
+
+    // Assign creep to a source team if it's a harvester or hauler (Phase 4)
+    if (result === OK && (role === CreepRoleEnum.HARVESTER || role === CreepRoleEnum.HAULER)) {
+      const newCreep = Game.creeps[name];
+      if (newCreep) {
+        this.assignCreepToSourceTeam(newCreep, role);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Assigns a newly spawned harvester or hauler to a source team
+   * Tracks team composition in Memory.sources[sourceId].team
+   */
+  private assignCreepToSourceTeam(creep: Creep, role: CreepRole): void {
+    const sources = creep.room.find(FIND_SOURCES);
+    if (sources.length === 0) return;
+
+    if (!Memory.sources) Memory.sources = {};
+
+    let targetSourceId: string | undefined;
+
+    if (role === CreepRoleEnum.HARVESTER) {
+      // Assign harvester to source with fewest harvesters
+      let minHarvesters = Infinity;
+      for (const source of sources) {
+        if (!Memory.sources[source.id]) {
+          Memory.sources[source.id] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
+        }
+        const team = Memory.sources[source.id].team;
+        if (!team.harvesters) team.harvesters = [];
+        if (team.harvesters.length < minHarvesters) {
+          minHarvesters = team.harvesters.length;
+          targetSourceId = source.id;
+        }
+      }
+    } else if (role === CreepRoleEnum.HAULER) {
+      // Assign hauler to source with fewest haulers
+      let minHaulers = Infinity;
+      for (const source of sources) {
+        if (!Memory.sources[source.id]) {
+          Memory.sources[source.id] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
+        }
+        const team = Memory.sources[source.id].team;
+        if (!team.haulers) team.haulers = [];
+        if (team.haulers.length < minHaulers) {
+          minHaulers = team.haulers.length;
+          targetSourceId = source.id;
+        }
+      }
+    }
+
+    if (targetSourceId) {
+      creep.memory.sourceId = targetSourceId;
+      const team = Memory.sources[targetSourceId].team;
+
+      if (role === CreepRoleEnum.HARVESTER) {
+        if (!team.harvesters) team.harvesters = [];
+        team.harvesters.push(creep.name);
+        debugLog.info(`${creep.name} (Harvester) assigned to Source${targetSourceId.slice(-4)}`);
+      } else if (role === CreepRoleEnum.HAULER) {
+        if (!team.haulers) team.haulers = [];
+        team.haulers.push(creep.name);
+        debugLog.info(`${creep.name} (Hauler) assigned to Source${targetSourceId.slice(-4)}`);
+      }
+    }
   }
 
   /**

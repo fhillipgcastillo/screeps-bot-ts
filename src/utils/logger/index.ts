@@ -1,4 +1,6 @@
 import { Logger } from "./Logger";
+import { StateLogger } from "./StateLogger";
+
 const logger = Logger.getInstance();
 
 export const debugLog = {
@@ -14,3 +16,5 @@ export const debugLog = {
   setLogLevels: (levels: string | string[]) => logger.setLogLevels(levels),
   getEnabledLevels: () => logger.getEnabledLevels()
 };
+
+export { StateLogger };

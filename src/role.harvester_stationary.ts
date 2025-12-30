@@ -7,10 +7,14 @@ export class RoleHarvester {
     public run(creep: Creep): void {
         // creep.say(creep.name);
         this.stateSetter(creep);
-        if (creep.store[RESOURCE_ENERGY] > 5) {
-            this.dropEnergy(creep)
-            // } else if (creep.memory.harvesting) {
+
+        // Tiga's stationary harvester: move to source and harvest
+        // Auto-drop happens when carry capacity is reached (getFreeCapacity === 0)
+        if (creep.store.getFreeCapacity() === 0) {
+            // Creep is at capacity - drop all energy at source location
+            creep.drop(RESOURCE_ENERGY);
         } else {
+            // Continue harvesting
             this.harvest(creep);
         }
     }
@@ -50,23 +54,38 @@ export class RoleHarvester {
 
     public harvest(creep: Creep): void {
         try {
-            let sourceTarget = this.newLogicSourceTarget(creep);
+            let sourceTarget: Source | null = null;
 
-            // const mapExits = Game.map.describeExits("W52S5")
+            // FIRST PRIORITY: Use the source assigned by spawn manager (stationary behavior)
+            if (creep.memory.sourceId) {
+                sourceTarget = Game.getObjectById(creep.memory.sourceId as Id<Source>);
+                if (!sourceTarget) {
+                    debugLog.warn(`${creep.name} assigned sourceId invalid, finding new source`);
+                    creep.memory.sourceId = undefined;
+                }
+            }
+
+            // FALLBACK: If no assigned source, find closest source
+            if (!sourceTarget) {
+                sourceTarget = this.newLogicSourceTarget(creep);
+            }
+
             if (sourceTarget) {
+                // If we just found a source and don't have an assignment, save it
+                if (!creep.memory.sourceId) {
+                    creep.memory.sourceId = sourceTarget.id;
+                }
+
                 var harvestAction = creep.harvest(sourceTarget);
 
                 if (harvestAction == ERR_NOT_IN_RANGE) {
-                    // creep.say("Moving...");
                     let movingError = creep.moveTo(sourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
                     if (movingError === ERR_NO_PATH || movingError === ERR_INVALID_TARGET) {
-                        debugLog.warn("Hvst mv2 ERR_NO_PATH", movingError); //most commont error when there's a lot of creeps
+                        debugLog.warn("Hvst mv2 ERR_NO_PATH", movingError);
                         creep.say("NO Pth")
                         this.cleanUpTargetsState(creep);
                         let targets = creep.room.find(FIND_SOURCES);
-
                         this.getNextClosestTarget(creep, targets)
-
                     }
                 } else if (harvestAction === ERR_INVALID_TARGET) {
                     debugLog.warn("Hvst ERR_INVALID_TARGET");
@@ -97,7 +116,8 @@ export class RoleHarvester {
     }
 
     public dropEnergy(creep: Creep): void {
-        creep.drop(RESOURCE_ENERGY, 5)
+        // Stationary harvester drops all energy at capacity
+        creep.drop(RESOURCE_ENERGY);
     }
 
     public memorizedPrevTargets(creep: Creep): void {

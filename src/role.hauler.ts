@@ -34,6 +34,10 @@ function withdrowRemains(creep: Creep, target: any) {
 export class RoleHauler {
   private spawn?: StructureSpawn;
 
+  // Tiga's queue constants
+  private static readonly ENERGY_THRESHOLD = 50; // Wait until 50+ energy accumulates before moving
+  private static readonly QUEUE_UPDATE_INTERVAL = 5; // Update queue every 5 ticks
+
   /** @param {Creep} creep **/
   public run(creep: Creep): void {
     this.stateSetter(creep);
@@ -49,40 +53,62 @@ export class RoleHauler {
   }
 
   public hauler(creep: Creep): void {
-    let combineSources: (Tombstone | Ruin | Resource)[] = [];
-
-    let droppedResources = creep.room.find(FIND_DROPPED_RESOURCES || FIND_TOMBSTONES || FIND_RUINS,
-      {
-        filter: resource => resource.amount >= 10
-        // filter: resource => resource.resourceType === RESOURCE_ENERGY || resource.resourceType === TOM
+    // First, check if we should be waiting in a queue (Tiga's queue system)
+    const sourceId = this.getAssignedSource(creep);
+    if (sourceId) {
+      const queueResult = this.checkQueueAndWait(creep, sourceId);
+      if (!queueResult.shouldProceed) {
+        // Hauler is waiting in queue - don't proceed to harvesting
+        creep.say(`Queue: ${queueResult.position}`);
+        return;
       }
-    );
+    }
+
+    // Get the source object this hauler is assigned to
+    const source = sourceId ? Game.getObjectById(sourceId as Id<Source>) : null;
+
+    // Find dropped energy NEAR the assigned source (where harvesters drop)
+    let droppedResources: Resource[] = [];
+    if (source) {
+      // Look for dropped resources within range 3 of the source (harvesters drop here)
+      droppedResources = source.room.find(FIND_DROPPED_RESOURCES, {
+        filter: resource => {
+          return resource.resourceType === RESOURCE_ENERGY &&
+                 resource.pos.getRangeTo(source) <= 3 &&
+                 resource.amount >= 10;
+        }
+      });
+    } else {
+      // Fallback if no source assigned: find any dropped resources with 10+ energy
+      droppedResources = creep.room.find(FIND_DROPPED_RESOURCES, {
+        filter: resource => resource.resourceType === RESOURCE_ENERGY && resource.amount >= 10
+      });
+    }
+
+    // Also check for tombstones and ruins as backup energy sources
     const tombStones = creep.room.find(FIND_TOMBSTONES, {
       filter: r => r.store.energy > 0
     });
     const ruins = creep.room.find(FIND_RUINS, {
       filter: r => r.store.energy > 0
     });
-    combineSources.concat(tombStones, ruins);
 
     let resourceTarget;
     let target: Tombstone | Ruin | null = null;
 
+    // Priority: tombstones > ruins > dropped resources at source
     if (tombStones.length > 0) {
       target = creep.pos.findClosestByRange(tombStones);
     } else if (ruins.length > 0) {
       target = creep.pos.findClosestByRange(ruins);
     } else if (droppedResources.length > 0 && creep.memory.resourceTarget) {
+      // Check if we still have the target we were going for
       resourceTarget = _.find(droppedResources, r => r.id === creep.memory.resourceTarget)
     } else if (droppedResources.length > 0) {
-      debugLog.debug("no source target");
-      resourceTarget = this.getAppropiateResourceTarget(creep, droppedResources);
-      // let availableTargets = _.filter(droppedResources, (source) => source.id !== creep.memory.sourceTarget);
-      // resourceTarget = this.getClosestTarget(creep, availableTargets)
+      debugLog.debug(`Hauler ${creep.name} finding target near source`);
+      // Find closest dropped resource near source
+      resourceTarget = creep.pos.findClosestByRange(droppedResources);
     }
-
-    // find the next source of energy from `combineSources` similar to what I did on harvesting when there it not path
-    // or implement a wanted logic to circle around the array of sources after we transfere what we found.
 
     if (target !== null) {
       withdrowRemains(creep, target);
@@ -91,27 +117,29 @@ export class RoleHauler {
       creep.memory.resourceTarget = resourceTarget?.id;
       let harvestAction = creep.pickup(resourceTarget as Resource);
 
-      if (harvestAction == ERR_NOT_IN_RANGE) {
-        // creep.say("Moving...");
+      if (harvestAction === OK) {
+        // Successfully picked up energy - rotate queue immediately
+        if (sourceId) {
+          this.rotateQueue(sourceId, creep.name);
+        }
+        this.cleanUpTargetsState(creep);
+      } else if (harvestAction == ERR_NOT_IN_RANGE) {
         let movingError = creep.moveTo(resourceTarget, { visualizePathStyle: { stroke: '#ffaa00' } });
         if (movingError !== OK) {
-          // debugLog.debug(creep.name, "issue moving");
           debugLog.warn("move action", movingError)
           this.cleanUpTargetsState(creep);
         }
-        // } else if (harvestAction === ERR_INVALID_TARGET) {
-        //   console.log(creep.name + "  Rsc ERR_INVALID_TARGET");
-        // } else if(harvestAction === ERR_NOT_ENOUGH_RESOURCES){
-        //   console.log("not enought energy, change source");
-        //   this.cleanUpTargetsState(creep);
-      } else if (harvestAction !== OK) {
-        debugLog.warn(creep.name + "  Rsc Another error", harvestAction);
-        debugLog.debug("target", creep.memory.resourceTarget);
+      } else {
+        // Other error - clean up and try again
+        debugLog.warn(creep.name + "  Rsc error: " + harvestAction);
         this.cleanUpTargetsState(creep);
       }
     } else {
+      // No energy found at source - move toward source location to wait for harvester drops
+      if (source) {
+        creep.moveTo(source, { visualizePathStyle: { stroke: '#ffff00' } });
+      }
       this.cleanUpTargetsState(creep);
-
     }
   }
 
@@ -124,10 +152,92 @@ export class RoleHauler {
     }
   }
 
+  /**
+   * Gets the source ID this hauler is assigned to
+   * (To be populated by per-source team assignment in Phase 3)
+   */
+  private getAssignedSource(creep: Creep): string | undefined {
+    return creep.memory.sourceId;
+  }
+
+  /**
+   * Implements Tiga's queue system: checks if hauler should wait before picking up energy
+   * Returns whether the hauler should proceed with gathering or wait in queue
+   */
+  private checkQueueAndWait(creep: Creep, sourceId: string): { shouldProceed: boolean; position: number } {
+    if (!Memory.sources) Memory.sources = {};
+    if (!Memory.sources[sourceId]) {
+      Memory.sources[sourceId] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
+    }
+
+    const sourceQueue = Memory.sources[sourceId].queue;
+    if (!sourceQueue.order) sourceQueue.order = [];
+    if (sourceQueue.accumulation === undefined) sourceQueue.accumulation = 0;
+
+    // Update queue position every QUEUE_UPDATE_INTERVAL ticks
+    if (Game.time % RoleHauler.QUEUE_UPDATE_INTERVAL === 0) {
+      // Remove dead creeps from queue
+      sourceQueue.order = sourceQueue.order.filter((id: string) => Game.creeps[id] !== undefined);
+
+      // Add creep to queue if not already in it
+      if (!sourceQueue.order.includes(creep.name)) {
+        sourceQueue.order.push(creep.name);
+      }
+
+      // Update accumulation from actual dropped resources at source
+      const source = Game.getObjectById(sourceId as Id<Source>);
+      if (source) {
+        const droppedNearSource = source.room.find(FIND_DROPPED_RESOURCES, {
+          filter: resource => {
+            return resource.resourceType === RESOURCE_ENERGY &&
+                   resource.pos.getRangeTo(source) <= 3;
+          }
+        });
+        sourceQueue.accumulation = droppedNearSource.reduce((sum, r) => sum + r.amount, 0);
+      }
+    }
+
+    // Get queue position
+    const position = sourceQueue.order.indexOf(creep.name);
+
+    // Check if energy threshold is met for this creep's position in queue
+    const energyPerHauler = RoleHauler.ENERGY_THRESHOLD;
+    const requiredEnergy = energyPerHauler * (position + 1);
+
+    // If this hauler is first in queue and threshold met, proceed
+    if (position === 0 && sourceQueue.accumulation >= requiredEnergy) {
+      return { shouldProceed: true, position };
+    }
+
+    // Otherwise, wait in queue
+    return { shouldProceed: false, position };
+  }
+
   public cleanUpTargetsState(creep: Creep): void {
     // this.memorizedPrevTargets(creep);
     creep.memory.prevResourceTarget = creep.memory.resourceTarget;
     creep.memory.resourceTarget = undefined;
+  }
+
+  /**
+   * Rotates the queue after a hauler successfully picks up energy
+   * Removes the hauler from the front of the queue so the next one can proceed
+   */
+  private rotateQueue(sourceId: string, creepName: string): void {
+    if (!Memory.sources || !Memory.sources[sourceId]) {
+      return;
+    }
+
+    const sourceQueue = Memory.sources[sourceId].queue;
+    if (!sourceQueue.order) sourceQueue.order = [];
+
+    // Remove the current creep from the front of the queue
+    const index = sourceQueue.order.indexOf(creepName);
+    if (index === 0) {
+      // Remove from front
+      sourceQueue.order.shift();
+      debugLog.debug(`Queue rotated at source ${sourceId.slice(-4)}: ${creepName} picked up, next is ${sourceQueue.order[0] || 'none'}`);
+    }
   }
 
   public getClosestTarget(creep: Creep, targets: any[]): Resource | Structure<StructureConstant> | Tombstone | Ruin | undefined {
