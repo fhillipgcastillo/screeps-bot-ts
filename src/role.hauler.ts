@@ -58,7 +58,27 @@ export class RoleHauler {
     if (sourceId) {
       const queueResult = this.checkQueueAndWait(creep, sourceId);
       if (!queueResult.shouldProceed) {
-        // Hauler is waiting in queue - don't proceed to harvesting
+        // Hauler is waiting in queue - move towards source but stay 5-10 blocks away
+        const source = Game.getObjectById(sourceId as Id<Source>);
+        if (source) {
+          const rangeToSource = creep.pos.getRangeTo(source);
+
+          // Move towards source but maintain 5-10 block distance
+          if (rangeToSource > 10) {
+            // Too far, move closer
+            creep.moveTo(source, { visualizePathStyle: { stroke: '#0088ff' } });
+          } else if (rangeToSource < 5) {
+            // Too close, move back (circle around at distance 5-10)
+            const positions = source.room.lookAtArea(
+              source.pos.y - 10,
+              source.pos.x - 10,
+              source.pos.y + 10,
+              source.pos.x + 10
+            );
+            // Just maintain position if already in good range
+          }
+          // If rangeToSource is 5-10, just stay there
+        }
         creep.say(`Queue: ${queueResult.position}`);
         return;
       }

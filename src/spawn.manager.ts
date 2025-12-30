@@ -180,38 +180,40 @@ export class SpawnManager {
       }
     }
 
-    // Tiga's spawn sequence: 1 Harvester → 1 Hauler → Double Both
-    // This sequence ensures optimal early game progression
+    // Tiga's spawn sequence per source: H → U → H → U → U → U
+    // This pattern repeats for each energy source for optimal early game progression
+    // With 2 sources: H,U,H,U,U,U (source 1) then H,U,H,U,U,U (source 2)
     const { spawn, creepCounts, availableEnergy } = context;
 
-    if (creepCounts.harvesters < 2 || creepCounts.haulers < 2) {
-      // Step 1: Spawn first harvester
-      if (creepCounts.harvesters < 1) {
-        if (availableEnergy >= 200) {
-          this.spawnCreep(spawn, [WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
-          return;
-        }
-      }
-      // Step 2: Spawn second harvester (only if at least 1 harvester exists)
-      else if (creepCounts.harvesters === 1 && creepCounts.haulers < 1) {
-        if (availableEnergy >= 200) {
-          this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
-          return;
-        }
-      }
-      // Step 3: Spawn first hauler (after 2 harvesters)
-      else if (creepCounts.harvesters >= 2 && creepCounts.haulers < 1) {
-        if (availableEnergy >= 150) {
-          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
-          return;
-        }
-      }
-      // Step 4: Spawn second hauler (after 2 harvesters and 1 hauler)
-      else if (creepCounts.harvesters >= 2 && creepCounts.haulers === 1) {
-        if (availableEnergy >= 150) {
-          this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
-          return;
-        }
+    // Spawn pattern: H → U → H → U → U → U per source
+    // Total creeps before pattern repeats: 6 per source (2H + 4U)
+    const totalCreeps = creepCounts.harvesters + creepCounts.haulers;
+    const sourcesCount = spawn.room.find(FIND_SOURCES).length;
+    const creepsPerSourceTeam = 6; // 2 Harvesters + 4 Haulers
+
+    // Determine what to spawn based on pattern position
+    if (totalCreeps < sourcesCount * creepsPerSourceTeam) {
+      const patternPosition = totalCreeps % creepsPerSourceTeam; // 0-5
+
+      switch (patternPosition) {
+        // Position 0 & 2: Harvester (H at 0, H at 2)
+        case 0:
+        case 2:
+          if (availableEnergy >= 200) {
+            this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
+            return;
+          }
+          break;
+        // Position 1, 3, 4, 5: Hauler (U at 1, 3, 4, 5)
+        case 1:
+        case 3:
+        case 4:
+        case 5:
+          if (availableEnergy >= 150) {
+            this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
+            return;
+          }
+          break;
       }
     }
 
@@ -539,6 +541,9 @@ export class SpawnManager {
   /**
    * Assigns a newly spawned harvester or hauler to a source team
    * Tracks team composition in Memory.sources[sourceId].team
+   *
+   * Harvester assignment: 2 per source (fill one source completely before moving to next)
+   * Hauler assignment: 4 per source (only to sources with harvesters), picks source with fewest haulers
    */
   private assignCreepToSourceTeam(creep: Creep, role: CreepRole): void {
     const sources = creep.room.find(FIND_SOURCES);
@@ -549,29 +554,35 @@ export class SpawnManager {
     let targetSourceId: string | undefined;
 
     if (role === CreepRoleEnum.HARVESTER) {
-      // Assign harvester to source with fewest harvesters
-      let minHarvesters = Infinity;
+      // Assign harvester: 2 per source, fill one source completely before moving to next
+      // Iterate sources in order and pick the first source with < 2 harvesters
       for (const source of sources) {
         if (!Memory.sources[source.id]) {
           Memory.sources[source.id] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
         }
         const team = Memory.sources[source.id].team;
         if (!team.harvesters) team.harvesters = [];
-        if (team.harvesters.length < minHarvesters) {
-          minHarvesters = team.harvesters.length;
+
+        // Assign to first source not yet full (< 2 harvesters)
+        if (team.harvesters.length < 2) {
           targetSourceId = source.id;
+          break; // Use first available source, don't search further
         }
       }
     } else if (role === CreepRoleEnum.HAULER) {
-      // Assign hauler to source with fewest haulers
+      // Assign hauler: ONLY to sources that have harvesters, max 4 per source
+      // Pick the source with fewest haulers (among those with harvesters)
       let minHaulers = Infinity;
       for (const source of sources) {
         if (!Memory.sources[source.id]) {
           Memory.sources[source.id] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
         }
         const team = Memory.sources[source.id].team;
+        if (!team.harvesters) team.harvesters = [];
         if (!team.haulers) team.haulers = [];
-        if (team.haulers.length < minHaulers) {
+
+        // Only assign to sources with harvesters AND less than 4 haulers
+        if (team.harvesters.length > 0 && team.haulers.length < 4 && team.haulers.length < minHaulers) {
           minHaulers = team.haulers.length;
           targetSourceId = source.id;
         }
@@ -585,12 +596,14 @@ export class SpawnManager {
       if (role === CreepRoleEnum.HARVESTER) {
         if (!team.harvesters) team.harvesters = [];
         team.harvesters.push(creep.name);
-        debugLog.info(`${creep.name} (Harvester) assigned to Source${targetSourceId.slice(-4)}`);
+        debugLog.info(`${creep.name} (Harvester) assigned to Source${targetSourceId.slice(-4)} - [${team.harvesters.length}/2]`);
       } else if (role === CreepRoleEnum.HAULER) {
         if (!team.haulers) team.haulers = [];
         team.haulers.push(creep.name);
-        debugLog.info(`${creep.name} (Hauler) assigned to Source${targetSourceId.slice(-4)}`);
+        debugLog.info(`${creep.name} (Hauler) assigned to Source${targetSourceId.slice(-4)} - [${team.haulers.length}/4]`);
       }
+    } else {
+      debugLog.warn(`Could not assign ${role} - no available sources (check team conditions)`);
     }
   }
 
