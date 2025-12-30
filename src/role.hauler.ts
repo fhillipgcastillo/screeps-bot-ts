@@ -187,7 +187,7 @@ export class RoleHauler {
   private checkQueueAndWait(creep: Creep, sourceId: string): { shouldProceed: boolean; position: number } {
     if (!Memory.sources) Memory.sources = {};
     if (!Memory.sources[sourceId]) {
-      Memory.sources[sourceId] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
+      Memory.sources[sourceId] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHarvesters: 2, maxHaulers: 4 } };
     }
 
     const sourceQueue = Memory.sources[sourceId].queue;

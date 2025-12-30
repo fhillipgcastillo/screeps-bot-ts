@@ -1,5 +1,6 @@
 import { GameManager } from "GameManager";
 import { debugLog } from "./utils/logger";
+import { BotSettingsManager } from "./utils/BotSettingsManager";
 
 // When compiling TS to JS and bundling with rollup, the line numbers and file names in error messages change
 // This utility uses source maps to get the line numbers and file names of the original, TS source code
@@ -13,6 +14,33 @@ export const loop = () => {
   // This will convert your excess CPU to a resource called pixels. You can use pixels to unlock cosmetics. Alternatively, you can stockpile them and sell them later on.
   if (Game.cpu.generatePixel && Game.cpu.bucket >= 10000) {
     Game.cpu.generatePixel();
+  }
+};
+
+// ============================================================================
+// GLOBAL BOT SETTINGS CONSOLE COMMANDS
+// ============================================================================
+// Usage in game console:
+// bot.setMaxHarvesters(3)          - Set default max harvesters to 3
+// bot.setSourceMaxHarvesters('sourceId', 4)  - Set max harvesters for specific source
+// bot.resetSourceMaxHarvesters('sourceId')   - Reset specific source to default
+// bot.getSettings()                - Display current bot settings
+
+(global as any).bot = {
+  setMaxHarvesters: (count: number): string => {
+    return BotSettingsManager.setDefaultMaxHarvesters(count);
+  },
+
+  setSourceMaxHarvesters: (sourceId: string, count: number): string => {
+    return BotSettingsManager.setSourceMaxHarvesters(sourceId, count);
+  },
+
+  resetSourceMaxHarvesters: (sourceId: string): string => {
+    return BotSettingsManager.resetSourceMaxHarvesters(sourceId);
+  },
+
+  getSettings: (): string => {
+    return BotSettingsManager.getSettings();
   }
 };
 

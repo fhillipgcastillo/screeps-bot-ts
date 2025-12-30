@@ -1,6 +1,7 @@
 import { levelDefinitions, LevelDefinition } from "./levels.handler";
 import { CreepRole, CreepRoleEnum, getCreepsByRole } from "./types";
 import { debugLog } from "./utils/logger";
+import { BotSettingsManager } from "./utils/BotSettingsManager";
 
 /**
  * Interface defining the structure for creep counts by role
@@ -180,40 +181,42 @@ export class SpawnManager {
       }
     }
 
-    // Tiga's spawn sequence per source: H → U → H → U → U → U
+    // Tiga's spawn sequence per source: H → U → H → U → U (repeat until full)
     // This pattern repeats for each energy source for optimal early game progression
-    // With 2 sources: H,U,H,U,U,U (source 1) then H,U,H,U,U,U (source 2)
+    // With 2 sources and 2H: H,U,H,U,U,U (source 1) then H,U,H,U,U,U (source 2)
+    // With 2 sources and 3H: H,U,H,U,U,H,U,U,U,U,U,U (3H + 6U per source)
     const { spawn, creepCounts, availableEnergy } = context;
 
-    // Spawn pattern: H → U → H → U → U → U per source
-    // Total creeps before pattern repeats: 6 per source (2H + 4U)
+    // Calculate team size based on configured max harvesters
+    const sources = spawn.room.find(FIND_SOURCES);
+    const avgMaxHarvesters = sources.length > 0
+      ? sources.reduce((sum, src) => sum + BotSettingsManager.getMaxHarvesters(src.id), 0) / sources.length
+      : 2;
+
     const totalCreeps = creepCounts.harvesters + creepCounts.haulers;
-    const sourcesCount = spawn.room.find(FIND_SOURCES).length;
-    const creepsPerSourceTeam = 6; // 2 Harvesters + 4 Haulers
+    const sourcesCount = sources.length;
+    const avgCreepsPerSourceTeam = avgMaxHarvesters + (avgMaxHarvesters * 2); // H + (H*2)U
+    const maxTotalCreeps = sourcesCount * avgCreepsPerSourceTeam;
 
-    // Determine what to spawn based on pattern position
-    if (totalCreeps < sourcesCount * creepsPerSourceTeam) {
-      const patternPosition = totalCreeps % creepsPerSourceTeam; // 0-5
+    // Determine what to spawn based on pattern: H, U, H, U, U (repeat)
+    if (totalCreeps < maxTotalCreeps) {
+      const patternCycle = [
+        CreepRoleEnum.HARVESTER, // Position 0: H
+        CreepRoleEnum.HAULER,    // Position 1: U
+        CreepRoleEnum.HARVESTER, // Position 2: H
+        CreepRoleEnum.HAULER,    // Position 3: U
+        CreepRoleEnum.HAULER     // Position 4: U
+      ];
 
-      switch (patternPosition) {
-        // Position 0 & 2: Harvester (H at 0, H at 2)
-        case 0:
-        case 2:
-          if (availableEnergy >= 200) {
-            this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
-            return;
-          }
-          break;
-        // Position 1, 3, 4, 5: Hauler (U at 1, 3, 4, 5)
-        case 1:
-        case 3:
-        case 4:
-        case 5:
-          if (availableEnergy >= 150) {
-            this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
-            return;
-          }
-          break;
+      const patternPosition = totalCreeps % patternCycle.length;
+      const roleToSpawn = patternCycle[patternPosition];
+
+      if (roleToSpawn === CreepRoleEnum.HARVESTER && availableEnergy >= 200) {
+        this.spawnCreep(spawn, [WORK, WORK, MOVE], 'Harvester', CreepRoleEnum.HARVESTER);
+        return;
+      } else if (roleToSpawn === CreepRoleEnum.HAULER && availableEnergy >= 150) {
+        this.spawnCreep(spawn, [CARRY, MOVE, MOVE], 'Hauler', CreepRoleEnum.HAULER);
+        return;
       }
     }
 
@@ -249,12 +252,15 @@ export class SpawnManager {
       }
 
       const team = sourceMemory.team;
-      const harvestersReady = team.harvesters && team.harvesters.length === 2;
-      const haulersReady = team.haulers && team.haulers.length === 4;
+      const maxHarvesters = BotSettingsManager.getMaxHarvesters(source.id);
+      const maxHaulers = BotSettingsManager.getMaxHaulers(source.id);
+
+      const harvestersReady = team.harvesters && team.harvesters.length === maxHarvesters;
+      const haulersReady = team.haulers && team.haulers.length === maxHaulers;
 
       // Check if team is missing members
       if (!harvestersReady || !haulersReady) {
-        debugLog.debug(`Team at Source${source.id.slice(-4)} incomplete: ${team.harvesters?.length || 0}/2 H, ${team.haulers?.length || 0}/4 U`);
+        debugLog.debug(`Team at Source${source.id.slice(-4)} incomplete: ${team.harvesters?.length || 0}/${maxHarvesters} H, ${team.haulers?.length || 0}/${maxHaulers} U`);
         return false;
       }
     }
@@ -521,8 +527,8 @@ export class SpawnManager {
    * Assigns a newly spawned harvester or hauler to a source team
    * Tracks team composition in Memory.sources[sourceId].team
    *
-   * Harvester assignment: 2 per source (fill one source completely before moving to next)
-   * Hauler assignment: 4 per source (only to sources with harvesters), picks source with fewest haulers
+   * Harvester assignment: max per source (fill one source completely before moving to next)
+   * Hauler assignment: max per source (only to sources with harvesters), picks source with fewest haulers
    */
   private assignCreepToSourceTeam(creep: Creep, role: CreepRole): void {
     const sources = creep.room.find(FIND_SOURCES);
@@ -530,38 +536,55 @@ export class SpawnManager {
 
     if (!Memory.sources) Memory.sources = {};
 
+    BotSettingsManager.initializeSettings();
+
     let targetSourceId: string | undefined;
 
     if (role === CreepRoleEnum.HARVESTER) {
-      // Assign harvester: 2 per source, fill one source completely before moving to next
-      // Iterate sources in order and pick the first source with < 2 harvesters
+      // Assign harvester: fill one source completely before moving to next
+      // Iterate sources in order and pick the first source not yet full
       for (const source of sources) {
+        const maxHarvesters = BotSettingsManager.getMaxHarvesters(source.id);
+
         if (!Memory.sources[source.id]) {
-          Memory.sources[source.id] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
+          const maxHaulers = BotSettingsManager.getMaxHaulers(source.id);
+          Memory.sources[source.id] = {
+            queue: { order: [], accumulation: 0 },
+            team: { harvesters: [], haulers: [], maxHarvesters, maxHaulers }
+          };
         }
         const team = Memory.sources[source.id].team;
         if (!team.harvesters) team.harvesters = [];
+        team.maxHarvesters = maxHarvesters;
 
-        // Assign to first source not yet full (< 2 harvesters)
-        if (team.harvesters.length < 2) {
+        // Assign to first source not yet full
+        if (team.harvesters.length < maxHarvesters) {
           targetSourceId = source.id;
           break; // Use first available source, don't search further
         }
       }
     } else if (role === CreepRoleEnum.HAULER) {
-      // Assign hauler: ONLY to sources that have harvesters, max 4 per source
+      // Assign hauler: ONLY to sources that have harvesters, max per source
       // Pick the source with fewest haulers (among those with harvesters)
       let minHaulers = Infinity;
       for (const source of sources) {
+        const maxHarvesters = BotSettingsManager.getMaxHarvesters(source.id);
+        const maxHaulers = BotSettingsManager.getMaxHaulers(source.id);
+
         if (!Memory.sources[source.id]) {
-          Memory.sources[source.id] = { queue: { order: [], accumulation: 0 }, team: { harvesters: [], haulers: [], maxHaulers: 4 } };
+          Memory.sources[source.id] = {
+            queue: { order: [], accumulation: 0 },
+            team: { harvesters: [], haulers: [], maxHarvesters, maxHaulers }
+          };
         }
         const team = Memory.sources[source.id].team;
         if (!team.harvesters) team.harvesters = [];
         if (!team.haulers) team.haulers = [];
+        team.maxHarvesters = maxHarvesters;
+        team.maxHaulers = maxHaulers;
 
-        // Only assign to sources with harvesters AND less than 4 haulers
-        if (team.harvesters.length > 0 && team.haulers.length < 4 && team.haulers.length < minHaulers) {
+        // Only assign to sources with harvesters AND less than max haulers
+        if (team.harvesters.length > 0 && team.haulers.length < maxHaulers && team.haulers.length < minHaulers) {
           minHaulers = team.haulers.length;
           targetSourceId = source.id;
         }
@@ -571,15 +594,17 @@ export class SpawnManager {
     if (targetSourceId) {
       creep.memory.sourceId = targetSourceId;
       const team = Memory.sources[targetSourceId].team;
+      const maxHarvesters = BotSettingsManager.getMaxHarvesters(targetSourceId);
+      const maxHaulers = BotSettingsManager.getMaxHaulers(targetSourceId);
 
       if (role === CreepRoleEnum.HARVESTER) {
         if (!team.harvesters) team.harvesters = [];
         team.harvesters.push(creep.name);
-        debugLog.info(`${creep.name} (Harvester) assigned to Source${targetSourceId.slice(-4)} - [${team.harvesters.length}/2]`);
+        debugLog.info(`${creep.name} (Harvester) assigned to Source${targetSourceId.slice(-4)} - [${team.harvesters.length}/${maxHarvesters}]`);
       } else if (role === CreepRoleEnum.HAULER) {
         if (!team.haulers) team.haulers = [];
         team.haulers.push(creep.name);
-        debugLog.info(`${creep.name} (Hauler) assigned to Source${targetSourceId.slice(-4)} - [${team.haulers.length}/4]`);
+        debugLog.info(`${creep.name} (Hauler) assigned to Source${targetSourceId.slice(-4)} - [${team.haulers.length}/${maxHaulers}]`);
       }
     } else {
       debugLog.warn(`Could not assign ${role} - no available sources (check team conditions)`);

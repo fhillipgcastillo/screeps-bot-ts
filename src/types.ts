@@ -334,6 +334,7 @@ export function getCreepsByRole<T extends CreepRole>(role: T): Creep[] {
 interface SourceTeam {
     harvesters: string[];
     haulers: string[];
+    maxHarvesters: number;
     maxHaulers: number;
 }
 
@@ -354,11 +355,20 @@ interface SourceMemory {
 }
 
 /**
+ * Global bot settings
+ */
+interface BotSettings {
+    defaultMaxHarvesters: number;
+    sourceMaxHarvesters?: Record<string, number>; // Per-source overrides
+}
+
+/**
  * Extension of the global Memory object to include sources tracking
  * This allows Memory.sources[sourceId] to store team and queue information
  */
 declare global {
     interface Memory {
         sources?: Record<string, SourceMemory>;
+        botSettings?: BotSettings;
     }
 }
